@@ -1,12 +1,12 @@
 {
     "segment_id": 5,
     "bbox": [
-        432.0,
-        614.0,
-        233.0,
-        203.0
+        867.0,
+        214.0,
+        400.0,
+        250.0
     ],
-    "area": 27142,
-    "predicted_iou": 0.975,
-    "stability_score": 0.9639
+    "area": 40226,
+    "predicted_iou": 0.9719,
+    "stability_score": 0.9702
 }
