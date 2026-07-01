@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+python-multipart
+numpy
+opencv-python
+Pillow
+matplotlib
+torch
+torchvision
+timm
+hydra-core==1.3.2
+omegaconf==2.3.0
+huggingface_hub
+scipy
+joblib
+iopath

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Upload Test — Top / Side</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; max-width:800px; margin:40px auto; }
+      .card { border:1px solid #ddd; padding:18px; border-radius:8px; margin-bottom:12px }
+      label { display:block; margin-bottom:8px; font-weight:600 }
+      input[type=file] { display:block; margin-bottom:8px }
+      button { padding:8px 12px; font-size:14px }
+      pre { background:#f7f7f7; padding:12px; border-radius:6px; overflow:auto }
+      img.preview { max-width:200px; max-height:200px; display:block; margin-top:8px }
+    </style>
+  </head>
+  <body>
+    <h1>Upload Test — Top / Side</h1>
+
+    <div class="card">
+      <label for="topFile">Upload TOP view image</label>
+      <input id="topFile" type="file" accept="image/*" />
+      <button id="uploadTop">Upload Top</button>
+      <div id="topResult"></div>
+    </div>
+
+    <div class="card">
+      <label for="sideFile">Upload SIDE view image</label>
+      <input id="sideFile" type="file" accept="image/*" />
+      <button id="uploadSide">Upload Side</button>
+      <div id="sideResult"></div>
+    </div>
+
+    <div class="card">
+      <button id="estimateBtn" style="padding:12px 18px; font-size:16px; font-weight:600; background:#4CAF50; color:white; border:none; cursor:pointer; border-radius:6px">
+        Estimate
+      </button>
+      <div id="estimateResult" style="margin-top:12px"></div>
+    </div>
+
+    <script>
+      async function doUpload(fileInputId, url, resultDivId) {
+        const input = document.getElementById(fileInputId);
+        const resultDiv = document.getElementById(resultDivId);
+        resultDiv.innerHTML = '';
+        if (!input.files || input.files.length === 0) {
+          resultDiv.innerHTML = '<strong style="color:darkred">No file selected</strong>';
+          return;
+        }
+        const file = input.files[0];
+        const form = new FormData();
+        form.append('file', file, file.name);
+
+        resultDiv.innerHTML = 'Uploading...';
+        try {
+          const resp = await fetch(url, { method: 'POST', body: form });
+          const data = await resp.json();
+          resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+
+          // preview image
+          const img = document.createElement('img');
+          img.className = 'preview';
+          img.src = URL.createObjectURL(file);
+          resultDiv.appendChild(img);
+        } catch (err) {
+          resultDiv.innerHTML = '<strong style="color:darkred">Upload failed</strong><pre>' + err + '</pre>';
+        }
+      }
+
+      document.getElementById('uploadTop').addEventListener('click', () => {
+        doUpload('topFile', '/upload/top', 'topResult');
+      });
+
+      document.getElementById('uploadSide').addEventListener('click', () => {
+        doUpload('sideFile', '/upload/side', 'sideResult');
+      });
+
+      async function doEstimate() {
+        const resultDiv = document.getElementById('estimateResult');
+        resultDiv.innerHTML = 'Processing segmentation...';
+        try {
+          const resp = await fetch('/process', { method: 'POST' });
+          const data = await resp.json();
+          if (resp.ok) {
+            resultDiv.innerHTML = `<strong style="color:darkgreen">✓ ${data.message}</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
+          } else {
+            resultDiv.innerHTML = `<strong style="color:darkred">✗ Error: ${data.detail}</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
+          }
+        } catch (err) {
+          resultDiv.innerHTML = '<strong style="color:darkred">Request failed</strong><pre>' + err + '</pre>';
+        }
+      }
+
+      document.getElementById('estimateBtn').addEventListener('click', doEstimate);
+    </script>
+  </body>
+</html>

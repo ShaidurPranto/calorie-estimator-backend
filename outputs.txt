@@ -1,0 +1,115 @@
+
+--------------------------------after taking user input--------------------------------
+input_images
+	- top
+	- side
+
+--------------------------------after running segmentation module----------------------
+
+segmentation-outputs
+	- coordinates
+		- top
+			-
+			-
+			...
+		- side
+			-
+			-
+			...
+	- masks
+		- top
+			-
+			-
+			...
+		- side
+			-
+			-
+			...	
+	- segments
+		- top
+			-
+			-
+			...
+		- side
+			-
+			-
+			...	
+	
+	
+	
+---------------------------after running thumb detection and calibration module-------------------------	
+
+top_view_finger_image_cm_per_pixel.txt
+top_view_finger_image_result.json
+
+side_view_finger_image_cm_per_pixel.txt
+side_view_finger_image_result.json
+
+top_segments
+	-
+	-
+	...
+side_segments
+	-
+	-
+	...
+
+----------------------------after running classification module-------------------------------------------
+
+categorized_top
+	- beguni
+		-
+		-
+		...
+	- porota
+		-
+		-
+		...
+	...
+categorized_side
+	- beguni
+		-
+		-
+		...
+	- porota
+		-
+		-
+		...
+	...
+	
+
+--------------------------after running volume estimation module----------------------------------------
+
+food_volumes_summary.json
+categorized_top_npy
+	- beguni
+		-
+		-
+		...
+	- porota
+		-
+		-
+		...
+	...
+categorized_side_npy
+	- beguni
+		-
+		-
+		...
+	- porota
+		-
+		-
+		...
+	...
+	
+	
+	
+-----------------------------After converting to actual nutritions---------------------------------------
+
+final_nutrition_output.json
+
+
+
+
+
+
