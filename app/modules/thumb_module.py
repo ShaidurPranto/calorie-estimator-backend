@@ -1,3 +1,4 @@
+# Cell 1: Class definition
 from __future__ import annotations
 import json
 import sys
@@ -5,11 +6,12 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 # Define Kaggle dataset paths
-INPUT_ROOT = Path('/kaggle/input')
-WORK_DIR = Path('/kaggle/working')
-WORK_DIR.mkdir(parents=True, exist_ok=True)
-DATASET_ROOT = INPUT_ROOT / 'datasets/intesartahmidalam/finger-detector-and-calibration-files'
+BASE_DIR = Path(__file__).resolve().parents[1]
+DATASET_ROOT = BASE_DIR / "models" / "thumb"
 CALIBRATION_PKG_DIR = DATASET_ROOT / 'calibration'
+
+WORK_DIR = BASE_DIR / "working"
+WORK_DIR.mkdir(parents=True, exist_ok=True)
 
 
 if str(DATASET_ROOT) not in sys.path:
@@ -17,7 +19,6 @@ if str(DATASET_ROOT) not in sys.path:
 
 from calibration.calibration import CalibrationResult, calibrate_from_image
 from calibration.modeling import FingerOneClassDetector
-
 
 class FingerDetectorAndCalibrator:
 
@@ -197,8 +198,3 @@ def run_module(
         segmented_dir=segmented_dir,
         allow_low_confidence=allow_low_confidence,
     )
-
-
-__all__ = [
-    'FingerDetectorAndCalibrator', 'run_module', 'CALIBRATION_PKG_DIR', 'WORK_DIR'
-]

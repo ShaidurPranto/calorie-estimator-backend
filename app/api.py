@@ -6,6 +6,8 @@ import shutil
 import os
 import glob
 
+from app.workflows.thumb_workflow import thumb_main
+
 app = FastAPI(title="Calorie Estimator - Upload API")
 
 # Working directory inside the app package where images should be saved
@@ -39,6 +41,31 @@ async def _save_upload_file(upload: UploadFile, dest_path: Path) -> None:
                 f.write(chunk)
     finally:
         await upload.close()
+
+
+def clean_working_directory():
+    working_dir = Path("/working")
+    keep_dir = working_dir / "input_images"
+
+    # Ensure the base directory exists before attempting to loop
+    if not working_dir.exists():
+        print(f"Directory {working_dir} does not exist.")
+        return
+
+    # Iterate over everything inside /working
+    for item in working_dir.iterdir():
+        # Skip the directory we want to keep
+        if item == keep_dir:
+            continue
+            
+        try:
+            if item.is_file() or item.is_symlink():
+                item.unlink()  # Deletes files or symlinks
+            elif item.is_dir():
+                shutil.rmtree(item)  # Deletes directories and their contents
+            print(f"Deleted: {item}")
+        except Exception as e:
+            print(f"Failed to delete {item}. Reason: {e}")
 
 
 @app.post("/upload/top")
@@ -81,13 +108,13 @@ def root():
 
 
 @app.post("/process")
-async def process_segmentation():
-    """Check if both top and side images exist, then run segmentation workflow.
+async def process():
+    """Check if both top and side images exist, then run full processing workflow.
     
     Returns:
-        - {"ok": True, "message": "Segmentation completed"} on success
+        - {"ok": True, "message": "Processing completed"} on success
         - 400 error if either image is missing
-        - 500 error if segmentation fails
+        - 500 error if processing fails
     """
     # Check if both top and side images exist
     top_files = glob.glob(str(WORKING_DIR / "top.*"))
@@ -101,15 +128,26 @@ async def process_segmentation():
 
     # clear outputs from previous processing
     # delete everything from /working except /working/input_images
+    # clean_working_directory()
 
     
     try:
         # Import and run the segmentation workflow
-        from app.workflows.segmentation_workflow import seg_main
+        # from app.workflows.segmentation_workflow import seg_main
         
-        # Call seg_main to run the segmentation
-        seg_main()
+        # # Call seg_main to run the segmentation
+        # seg_main()
+
+        # Import and run thumb workflow
+        # from app.workflows.thumb_workflow import thumb_main
         
+        # # Call thumb_main to run the thumbnail generation
+        # thumb_main()
+
+        # Import and run classifier workflow
+        from app.workflows.classification_workflow import class_main
+        class_main()
+
         return JSONResponse({"ok": True, "message": "Processing completed successfully"})
     
     except Exception as e:

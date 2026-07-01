@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import shutil
 import torch
 import torch.nn as nn
@@ -6,6 +7,7 @@ from torchvision import transforms
 from PIL import Image
 import timm
 
+BASE_DIR = Path(__file__).resolve().parents[1]
 
 class FoodClassifier:
     """
@@ -16,8 +18,8 @@ class FoodClassifier:
         """
         Initialize the FoodClassifier.
         """
-        self.model_path = "/kaggle/input/datasets/shaidurpranto/food-classifier-models/model_1_vit_segment_aware.pth"
-        self.labels_path = "/kaggle/input/datasets/shaidurpranto/food-classifier-models/labels.txt"
+        self.model_path = BASE_DIR / "models" / "classifier" / "model_1_vit_segment_aware.pth"
+        self.labels_path = BASE_DIR / "models" / "classifier" / "labels.txt"
         self.num_classes = 19
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
