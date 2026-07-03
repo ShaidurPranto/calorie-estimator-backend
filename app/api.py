@@ -11,6 +11,17 @@ from app.workflows.thumb_workflow import thumb_main
 
 app = FastAPI(title="Calorie Estimator - Upload API")
 
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 # Working directory inside the app package where images should be saved
 APP_DIR = Path(__file__).resolve().parent
 WORKING_DIR = APP_DIR / "working" / "input_images"
@@ -244,6 +255,12 @@ def display_food_views(folder_path):
         print(f"An error occurred while loading or displaying the images: {e}")
 
 
+@app.get("/test")
+async def test_api():
+    """Test endpoint for API validation."""
+    return JSONResponse({"ok": True, "message": "API is working correctly."})
+
+
 @app.post("/upload/top")
 async def upload_top(file: UploadFile = File(...)):
     """Upload the top view image and save as `top<ext>` in `app/working/input_images`.
@@ -266,12 +283,6 @@ async def upload_side(file: UploadFile = File(...)):
     dest = WORKING_DIR / f"side{ext}"
     await _save_upload_file(file, dest)
     return JSONResponse({"ok": True, "saved_as": str(dest)})
-
-
-# Serve the simple frontend under /ui (ui/index.html)
-UI_DIR = Path(__file__).resolve().parent.parent / "ui"
-if UI_DIR.exists():
-    app.mount("/ui", StaticFiles(directory=str(UI_DIR)), name="ui")
 
 
 @app.get("/")
@@ -349,7 +360,16 @@ async def process():
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
 
+
+# Serve the simple frontend under /ui (ui/index.html)
+# UI_DIR = Path(__file__).resolve().parent.parent / "ui"
+# if UI_DIR.exists():
+#     app.mount("/ui", StaticFiles(directory=str(UI_DIR)), name="ui")
+
 if __name__ == "__main__":
     # Simple launcher for manual tests
     import uvicorn
     uvicorn.run("app.api:app", host="0.0.0.0", port=8000, reload=True)
+
+
+# lt --port 8000 --subdomain calorie

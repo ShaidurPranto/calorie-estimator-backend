@@ -39,7 +39,16 @@
     </div>
 
     <script>
-      async function doUpload(fileInputId, url, resultDivId) {
+      // ==========================================
+      // CONFIGURATION: Set your backend URL here
+      // ==========================================
+
+      const BASE_URL = 'https://calorie.loca.lt';
+      // const BASE_URL = 'http://localhost:8000'; 
+      
+      // When deployed, change this to something like 'https://your-api-domain.com'
+
+      async function doUpload(fileInputId, endpoint, resultDivId) {
         const input = document.getElementById(fileInputId);
         const resultDiv = document.getElementById(resultDivId);
         resultDiv.innerHTML = '';
@@ -53,7 +62,8 @@
 
         resultDiv.innerHTML = 'Uploading...';
         try {
-          const resp = await fetch(url, { method: 'POST', body: form });
+          // Combining the base URL with the endpoint route
+          const resp = await fetch(`${BASE_URL}${endpoint}`, { method: 'POST', body: form });
           const data = await resp.json();
           resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
 
@@ -79,7 +89,8 @@
         const resultDiv = document.getElementById('estimateResult');
         resultDiv.innerHTML = 'Processing segmentation...';
         try {
-          const resp = await fetch('/process', { method: 'POST' });
+          // Combining the base URL with the process endpoint route
+          const resp = await fetch(`${BASE_URL}/process`, { method: 'POST' });
           const data = await resp.json();
           if (resp.ok) {
             resultDiv.innerHTML = `<strong style="color:darkgreen">✓ ${data.message}</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;

@@ -141,7 +141,7 @@ class FingerDetectorAndCalibrator:
 
         fig.suptitle(f"All segmented images ({view_name})", fontsize=14)
         plt.tight_layout()
-        plt.show()
+        # plt.show()
 
         result = self.detect_and_calibrate(
             segmented_dir=segmented_dir,
@@ -171,7 +171,7 @@ class FingerDetectorAndCalibrator:
         plt.imshow(chosen_img)
         plt.title(f"Chosen finger image ({view_name}): {chosen_path.name}")
         plt.axis('off')
-        plt.show()
+        # plt.show()
 
         print(f"Saved JSON: {out_json}")
         print(f"Saved TXT: {out_txt}")

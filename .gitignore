@@ -2,4 +2,4 @@
 /app/models/
 
 # ignore working 
-/app/working
+/app/working/

@@ -3,10 +3,10 @@
     "bbox": [
         0.0,
         0.0,
-        1279.0,
-        963.0
+        959.0,
+        1279.0
     ],
-    "area": 636428,
-    "predicted_iou": 0.9942,
-    "stability_score": 0.9763
+    "area": 612158,
+    "predicted_iou": 0.9963,
+    "stability_score": 0.9845
 }
