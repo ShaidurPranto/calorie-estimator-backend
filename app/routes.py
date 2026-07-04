@@ -48,10 +48,7 @@ async def upload_side(file: UploadFile = File(...)):
 @app.get("/")
 def root():
     """Redirect to the UI test page if present, otherwise return a short message."""
-    index = UI_DIR / "index.html"
-    if index.exists():
-        return RedirectResponse(url="/ui/index.html")
-    return {"message": "Upload API available at /upload/top and /upload/side"}
+    return {"message": "server is running"}
 
 
 @app.post("/process")
@@ -73,7 +70,6 @@ async def process():
         raise HTTPException(status_code=400, detail="Side image not found in input_images folder")
     
 
-    # clear outputs from previous processing
     # delete everything from /working except /working/input_images
     clean_working_directory()
 
@@ -96,10 +92,7 @@ async def process():
         vol_main()
 
         # Generate final output
-        BASE_DIR = Path(__file__).resolve().parents[1]
-        # display_food_views(BASE_DIR / "app" / "working" / "input_images")
         display_food_views(WORKING_DIR / "input_images")
-        # final_output_path = BASE_DIR / "app" / "working" / "final_nutrition_output.json"
         final_output_path = WORKING_DIR / "final_nutrition_output.json"
         analyze_food_volume(WORKING_DIR / "food_volumes_summary.json", final_output_path)
 

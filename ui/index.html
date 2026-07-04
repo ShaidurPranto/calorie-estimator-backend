@@ -1,108 +1,126 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Upload Test — Top / Side</title>
-    <style>
-      body { font-family: Arial, Helvetica, sans-serif; max-width:800px; margin:40px auto; }
-      .card { border:1px solid #ddd; padding:18px; border-radius:8px; margin-bottom:12px }
-      label { display:block; margin-bottom:8px; font-weight:600 }
-      input[type=file] { display:block; margin-bottom:8px }
-      button { padding:8px 12px; font-size:14px }
-      pre { background:#f7f7f7; padding:12px; border-radius:6px; overflow:auto }
-      img.preview { max-width:200px; max-height:200px; display:block; margin-top:8px }
-    </style>
-  </head>
-  <body>
-    <h1>Upload Test — Top / Side</h1>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Plate Scan — Volumetric Nutrition Estimator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
 
-    <div class="card">
-      <label for="topFile">Upload TOP view image</label>
-      <input id="topFile" type="file" accept="image/*" />
-      <button id="uploadTop">Upload Top</button>
-      <div id="topResult"></div>
+  <div class="grain"></div>
+
+  <header class="hero">
+    <div class="hero__eyebrow">TWO ANGLES · ONE PLATE · FULL BREAKDOWN</div>
+    <h1 class="hero__title">Scan your plate<br>from above &amp; the side.</h1>
+    <p class="hero__sub">Upload a top-down and a side view. The moment both are in, we start measuring volume and portion out the nutrition — no button required.</p>
+  </header>
+
+  <main class="tray-section">
+    <div class="tray" id="tray">
+
+      <div class="slot" id="slot-top" data-slot="top">
+        <div class="slot__frame">
+          <img class="slot__preview" id="preview-top" alt="" />
+          <div class="slot__placeholder">
+            <svg class="slot__icon" viewBox="0 0 48 48" fill="none">
+              <circle cx="24" cy="24" r="19" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="24" cy="24" r="7.5" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <span class="slot__label-top">TOP VIEW</span>
+            <span class="slot__hint">bird's-eye of the full plate</span>
+          </div>
+          <div class="slot__check">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L10 17.5L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <label class="slot__control">
+          <input type="file" id="file-top" accept="image/*" hidden />
+          <span class="slot__control-text">Choose top image</span>
+        </label>
+        <div class="slot__filename" id="filename-top">No file selected</div>
+      </div>
+
+      <div class="tray__divider" aria-hidden="true">
+        <span>+</span>
+      </div>
+
+      <div class="slot" id="slot-side" data-slot="side">
+        <div class="slot__frame">
+          <img class="slot__preview" id="preview-side" alt="" />
+          <div class="slot__placeholder">
+            <svg class="slot__icon" viewBox="0 0 48 48" fill="none">
+              <path d="M6 30C6 30 12 18 24 18C36 18 42 30 42 30" stroke="currentColor" stroke-width="1.6"/>
+              <line x1="4" y1="34" x2="44" y2="34" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <span class="slot__label-top">SIDE VIEW</span>
+            <span class="slot__hint">profile, to read the height</span>
+          </div>
+          <div class="slot__check">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L10 17.5L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <label class="slot__control">
+          <input type="file" id="file-side" accept="image/*" hidden />
+          <span class="slot__control-text">Choose side image</span>
+        </label>
+        <div class="slot__filename" id="filename-side">No file selected</div>
+      </div>
+
     </div>
 
-    <div class="card">
-      <label for="sideFile">Upload SIDE view image</label>
-      <input id="sideFile" type="file" accept="image/*" />
-      <button id="uploadSide">Upload Side</button>
-      <div id="sideResult"></div>
+    <!-- Scan / progress state -->
+    <div class="scan" id="scan" hidden>
+      <div class="scan__dial">
+        <svg viewBox="0 0 120 120" class="scan__ring">
+          <circle cx="60" cy="60" r="52" class="scan__ring-track"/>
+          <circle cx="60" cy="60" r="52" class="scan__ring-fill" id="scan-ring-fill"/>
+        </svg>
+        <div class="scan__plate">
+          <div class="scan__sweep"></div>
+        </div>
+      </div>
+      <div class="scan__status">
+        <div class="scan__stage" id="scan-stage">Segmenting plate…</div>
+        <div class="scan__substage" id="scan-substage">isolating food regions from the tray</div>
+      </div>
     </div>
 
-    <div class="card">
-      <button id="estimateBtn" style="padding:12px 18px; font-size:16px; font-weight:600; background:#4CAF50; color:white; border:none; cursor:pointer; border-radius:6px">
-        Estimate
-      </button>
-      <div id="estimateResult" style="margin-top:12px"></div>
+    <div class="error-banner" id="error-banner" hidden>
+      <span id="error-text"></span>
+      <button id="error-retry">Try again</button>
     </div>
+  </main>
 
-    <script>
-      // ==========================================
-      // CONFIGURATION: Set your backend URL here
-      // ==========================================
+  <!-- Result: printed ticket -->
+  <section class="ticket-wrap" id="ticket-wrap" hidden>
+    <div class="ticket" id="ticket">
+      <div class="ticket__header">
+        <div class="ticket__brand">PLATE SCAN</div>
+        <div class="ticket__meta">NUTRITION RECEIPT</div>
+        <div class="ticket__rule"></div>
+        <div class="ticket__timestamp" id="ticket-timestamp"></div>
+      </div>
 
-      // const BASE_URL = 'https://calorie.loca.lt';
-      const BASE_URL = 'http://localhost:8000'; 
-      
-      // When deployed, change this to something like 'https://your-api-domain.com'
+      <div class="ticket__items" id="ticket-items"></div>
 
-      async function doUpload(fileInputId, endpoint, resultDivId) {
-        const input = document.getElementById(fileInputId);
-        const resultDiv = document.getElementById(resultDivId);
-        resultDiv.innerHTML = '';
-        if (!input.files || input.files.length === 0) {
-          resultDiv.innerHTML = '<strong style="color:darkred">No file selected</strong>';
-          return;
-        }
-        const file = input.files[0];
-        const form = new FormData();
-        form.append('file', file, file.name);
+      <div class="ticket__rule ticket__rule--dashed"></div>
 
-        resultDiv.innerHTML = 'Uploading...';
-        try {
-          // Combining the base URL with the endpoint route
-          const resp = await fetch(`${BASE_URL}${endpoint}`, { method: 'POST', body: form });
-          const data = await resp.json();
-          resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      <div class="ticket__totals" id="ticket-totals"></div>
 
-          // preview image
-          const img = document.createElement('img');
-          img.className = 'preview';
-          img.src = URL.createObjectURL(file);
-          resultDiv.appendChild(img);
-        } catch (err) {
-          resultDiv.innerHTML = '<strong style="color:darkred">Upload failed</strong><pre>' + err + '</pre>';
-        }
-      }
+      <div class="ticket__rule ticket__rule--dashed"></div>
 
-      document.getElementById('uploadTop').addEventListener('click', () => {
-        doUpload('topFile', '/upload/top', 'topResult');
-      });
+      <div class="ticket__footer">
+        <div class="ticket__footer-line">THANK YOU FOR EATING MINDFULLY</div>
+        <div class="ticket__barcode" aria-hidden="true"></div>
+      </div>
+    </div>
+    <button class="rescan-btn" id="rescan-btn">Scan another plate</button>
+  </section>
 
-      document.getElementById('uploadSide').addEventListener('click', () => {
-        doUpload('sideFile', '/upload/side', 'sideResult');
-      });
-
-      async function doEstimate() {
-        const resultDiv = document.getElementById('estimateResult');
-        resultDiv.innerHTML = 'Processing segmentation...';
-        try {
-          // Combining the base URL with the process endpoint route
-          const resp = await fetch(`${BASE_URL}/process`, { method: 'POST' });
-          const data = await resp.json();
-          if (resp.ok) {
-            resultDiv.innerHTML = `<strong style="color:darkgreen">✓ ${data.message}</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
-          } else {
-            resultDiv.innerHTML = `<strong style="color:darkred">✗ Error: ${data.detail}</strong><pre>${JSON.stringify(data, null, 2)}</pre>`;
-          }
-        } catch (err) {
-          resultDiv.innerHTML = '<strong style="color:darkred">Request failed</strong><pre>' + err + '</pre>';
-        }
-      }
-
-      document.getElementById('estimateBtn').addEventListener('click', doEstimate);
-    </script>
-  </body>
+  <script src="script.js"></script>
+</body>
 </html>
