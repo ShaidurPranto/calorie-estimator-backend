@@ -3,6 +3,22 @@ from fastapi import UploadFile
 from pathlib import Path
 import shutil
 import os
+from fastapi.encoders import jsonable_encoder
+
+
+def get_npy_files(directory: Path):
+    return sorted([f.name for f in directory.glob("*.npy")])
+
+
+def get_subfolders_with_npy(directory: Path):
+    result = {}
+
+    for subdir in sorted(directory.iterdir()):
+        if subdir.is_dir():
+            npy_files = get_npy_files(subdir)
+            result[subdir.name] = npy_files
+
+    return result
 
 
 def _safe_extension(filename: str) -> str:

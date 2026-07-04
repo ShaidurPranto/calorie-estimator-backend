@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import glob
+from fastapi.responses import FileResponse
 
 from app.main import app, WORKING_DIR
 from app.helpers import (
@@ -12,6 +13,8 @@ from app.helpers import (
     clean_working_directory,
     analyze_food_volume,
     display_food_views,
+    get_npy_files,
+    get_subfolders_with_npy
 )
 
 
@@ -114,3 +117,256 @@ async def process():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
+
+@app.get("/result/segmentation/top")
+async def get_top_segmentation_results():
+    """
+    Returns all .npy mask files from:
+    working/segmentation-outputs/masks/top
+    """
+
+    target_dir = (
+        WORKING_DIR
+        / "segmentation-outputs"
+        / "masks"
+        / "top"
+    )
+
+    if not target_dir.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
+
+    npy_files = get_npy_files(target_dir)
+
+    return JSONResponse({
+        "ok": True,
+        "directory": str(target_dir.relative_to(WORKING_DIR)),
+        "count": len(npy_files),
+        "files": npy_files
+    })
+
+@app.get("/result/segmentation/side")
+async def get_side_segmentation_results():
+    """
+    Returns all .npy mask files from:
+    working/segmentation-outputs/masks/side
+    """
+
+    target_dir = (
+        WORKING_DIR
+        / "segmentation-outputs"
+        / "masks"
+        / "side"
+    )
+
+    if not target_dir.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
+
+    npy_files = get_npy_files(target_dir)
+
+    return JSONResponse({
+        "ok": True,
+        "directory": str(target_dir.relative_to(WORKING_DIR)),
+        "count": len(npy_files),
+        "files": npy_files
+    })
+
+
+@app.get("/result/classification/top")
+async def get_top_classification_results():
+    """
+    Returns all subfolders and their .npy files from:
+    working/categorized_top_npy
+    """
+
+    target_dir = (
+        WORKING_DIR
+        / "categorized_top_npy"
+    )
+
+    if not target_dir.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
+
+    categorized_files = get_subfolders_with_npy(target_dir)
+
+    return JSONResponse({
+        "ok": True,
+        "directory": str(target_dir.relative_to(WORKING_DIR)),
+        "categories": categorized_files
+    })
+
+
+@app.get("/result/classification/side")
+async def get_side_classification_results():
+    """
+    Returns all subfolders and their .npy files from:
+    working/categorized_side_npy
+    """
+
+    target_dir = (
+        WORKING_DIR
+        / "categorized_side_npy"
+    )
+
+    if not target_dir.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
+
+    categorized_files = get_subfolders_with_npy(target_dir)
+
+    return JSONResponse({
+        "ok": True,
+        "directory": str(target_dir.relative_to(WORKING_DIR)),
+        "categories": categorized_files
+    })
+
+
+@app.get("/result/segmentation/top/{filename}")
+async def get_top_segmentation_file(filename: str):
+    """
+    Download a specific segmentation .npy file from:
+    working/segmentation-outputs/masks/top
+    """
+
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "segmentation-outputs"
+        / "masks"
+        / "top"
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found."
+        )
+
+    return FileResponse(
+        path=target_file,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
+
+
+@app.get("/result/segmentation/side/{filename}")
+async def get_side_segmentation_file(filename: str):
+    """
+    Download a specific segmentation .npy file from:
+    working/segmentation-outputs/masks/side
+    """
+
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "segmentation-outputs"
+        / "masks"
+        / "side"
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found."
+        )
+
+    return FileResponse(
+        path=target_file,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
+
+
+
+@app.get("/result/classification/top/{category}/{filename}")
+async def get_top_classification_file(
+    category: str,
+    filename: str
+):
+    """
+    Download a specific classified .npy file from:
+    working/categorized_top_npy/<category>/
+    """
+
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "categorized_top_npy"
+        / category
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found in category '{category}'."
+        )
+
+    return FileResponse(
+        path=target_file,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
+
+
+@app.get("/result/classification/side/{category}/{filename}")
+async def get_side_classification_file(
+    category: str,
+    filename: str
+):
+    """
+    Download a specific classified .npy file from:
+    working/categorized_side_npy/<category>/<filename>
+    """
+
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "categorized_side_npy"
+        / category
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found in category '{category}'."
+        )
+
+    return FileResponse(
+        path=target_file,
+        filename=filename,
+        media_type="application/octet-stream"
+    )
