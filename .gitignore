@@ -3,3 +3,9 @@
 
 # ignore working 
 /app/working/
+
+# ignore dist
+/app/dist/
+
+# ignore build
+/app/build/
