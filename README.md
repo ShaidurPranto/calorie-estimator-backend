@@ -31,7 +31,7 @@ app/
 │   └── categorized_side_npy/       # .npy files grouped by predicted food category (side view)
 ├── models/
 │   ├── classifier/                 # Input models for the classification workflow (from notebook)
-│   ├── segmentation/               # Input models for the segmentation workflow (from notebook)
+│   ├── segmentation/                # Input models for the segmentation workflow (from notebook)
 │   └── thumb/                      # Input models for the thumbnail workflow (from notebook)
 └── workflows/
     ├── segmentation_workflow.py    # seg_main()
@@ -50,7 +50,7 @@ A minimal `ui/index.html` is included purely to exercise the API endpoints manua
 
 ### Requirements
 - Python 3.9+
-- `fastapi`, `uvicorn`, `python-multipart`, `Pillow`, `matplotlib` (for the debug view), plus whatever your workflow scripts depend on (e.g. `torch`, `opencv-python`, etc.)
+- `fastapi`, `uvicorn`, `python-multipart`, `Pillow`, `matplotlib` (for the debug view), `numpy`, plus whatever your workflow scripts depend on (e.g. `torch`, `opencv-python`, etc.)
 
 ### Run locally
 
@@ -177,50 +177,75 @@ curl -X POST "http://localhost:8000/process"
 **Response** `200 OK`
 ```json
 {
-  "ok": true,
-  "message": "Processing completed successfully",
-  "data": {
-    "per_food_breakdown": {
-      "biriyani": {
-        "volume_cm3": 350,
-        "calories_kcal": 532.7,
-        "macros": {
-          "carbohydrates_g": 112.0,
-          "fiber_g": 5.25,
-          "protein_g": 31.5,
-          "fat_g": 49.0
+    "ok": true,
+    "message": "Processing completed successfully",
+    "data": {
+        "per_food_breakdown": {
+            "porota": {
+                "volume_cm3": 80.0,
+                "calories_kcal": 220.8,
+                "macros": {
+                    "carbohydrates_g": 28.0,
+                    "fiber_g": 1.6,
+                    "protein_g": 4.8,
+                    "fat_g": 9.6
+                },
+                "macro_split_%": {
+                    "carbs": 64,
+                    "protein": 11,
+                    "fat": 22
+                },
+                "minerals": {
+                    "sodium_mg": 32.0,
+                    "calcium_mg": 1.6,
+                    "iron_mg": 0.48
+                },
+                "vitamins": {
+                    "vit_a_ug": 0.0,
+                    "vit_c_mg": 0.0,
+                    "vit_d_ug": 0.0
+                }
+            },
+            "yogurt": {
+                "volume_cm3": 24.0,
+                "calories_kcal": 17.3,
+                "macros": {
+                    "carbohydrates_g": 1.2,
+                    "fiber_g": 0.0,
+                    "protein_g": 0.96,
+                    "fat_g": 0.96
+                },
+                "macro_split_%": {
+                    "carbs": 38,
+                    "protein": 31,
+                    "fat": 31
+                },
+                "minerals": {
+                    "sodium_mg": 4.1,
+                    "calcium_mg": 2.9,
+                    "iron_mg": 0.02
+                },
+                "vitamins": {
+                    "vit_a_ug": 12.0,
+                    "vit_c_mg": 12.0,
+                    "vit_d_ug": 2.4
+                }
+            }
         },
-        "macro_split_%": {
-          "carbs": 56,
-          "protein": 16,
-          "fat": 25
-        },
-        "minerals": {
-          "sodium_mg": 175.0,
-          "calcium_mg": 14.0,
-          "iron_mg": 2.8
-        },
-        "vitamins": {
-          "vit_a_ug": 175.0,
-          "vit_c_mg": 0.0,
-          "vit_d_ug": 0.0
+        "meal_totals": {
+            "calories_kcal": 238.1,
+            "carbohydrates_g": 29.2,
+            "fiber_g": 1.6,
+            "protein_g": 5.76,
+            "fat_g": 10.56,
+            "sodium_mg": 36.1,
+            "calcium_mg": 4.5,
+            "iron_mg": 0.5,
+            "vit_a_ug": 12.0,
+            "vit_c_mg": 12.0,
+            "vit_d_ug": 2.4
         }
-      }
-    },
-    "meal_totals": {
-      "calories_kcal": 532.7,
-      "carbohydrates_g": 112.0,
-      "fiber_g": 5.25,
-      "protein_g": 31.5,
-      "fat_g": 49.0,
-      "sodium_mg": 175.0,
-      "calcium_mg": 14.0,
-      "iron_mg": 2.8,
-      "vit_a_ug": 175.0,
-      "vit_c_mg": 0.0,
-      "vit_d_ug": 0.0
     }
-  }
 }
 ```
 
@@ -299,7 +324,7 @@ curl "http://localhost:8000/result/segmentation/side"
 
 ### `GET /result/segmentation/top/{filename}`
 
-Downloads a specific `.npy` segmentation mask file for the **top view**.
+Downloads a specific `.npy` segmentation mask file for the **top view** as a raw binary file.
 
 **Request**
 
@@ -322,9 +347,46 @@ curl -O "http://localhost:8000/result/segmentation/top/mask_0.npy"
 
 ---
 
+### `GET /result/segmentation/top/content/{filename}`
+
+Loads a specific `.npy` segmentation mask file for the **top view** and returns its contents inline as JSON, instead of as a binary download. The array is read with `numpy.load(..., allow_pickle=False)` and converted to a nested Python list via `.tolist()`.
+
+**Request**
+
+| Path param | Type | Description |
+|------------|------|-------------|
+| `filename` | string | Must end in `.npy`, e.g. `mask_0.npy` |
+
+```
+GET /result/segmentation/top/content/{filename}
+```
+
+```bash
+curl "http://localhost:8000/result/segmentation/top/content/mask_0.npy"
+```
+
+**Response** `200 OK`
+```json
+{
+  "ok": true,
+  "filename": "mask_0.npy",
+  "mask": [[0, 0, 1], [0, 1, 1], [1, 1, 1]]
+}
+```
+
+**Error responses**
+
+| Status | Condition | Body |
+|--------|-----------|------|
+| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
+| `404 Not Found` | File doesn't exist at `working/segmentation-outputs/masks/top/<filename>` | `{"detail": "File '<filename>' not found."}` |
+| `500 Internal Server Error` | The file exists but couldn't be loaded/parsed as a numpy array | `{"detail": "Error reading or parsing the segmentation file: <error message>"}` |
+
+---
+
 ### `GET /result/segmentation/side/{filename}`
 
-Downloads a specific `.npy` segmentation mask file for the **side view**.
+Downloads a specific `.npy` segmentation mask file for the **side view** as a raw binary file.
 
 **Request**
 
@@ -344,6 +406,43 @@ curl -O "http://localhost:8000/result/segmentation/side/mask_0.npy"
 |--------|-----------|------|
 | `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
 | `404 Not Found` | File doesn't exist at `working/segmentation-outputs/masks/side/<filename>` | `{"detail": "File '<filename>' not found."}` |
+
+---
+
+### `GET /result/segmentation/side/content/{filename}`
+
+Loads a specific `.npy` segmentation mask file for the **side view** and returns its contents inline as JSON, instead of as a binary download.
+
+**Request**
+
+| Path param | Type | Description |
+|------------|------|-------------|
+| `filename` | string | Must end in `.npy`, e.g. `mask_0.npy` |
+
+```
+GET /result/segmentation/side/content/{filename}
+```
+
+```bash
+curl "http://localhost:8000/result/segmentation/side/content/mask_0.npy"
+```
+
+**Response** `200 OK`
+```json
+{
+  "ok": true,
+  "filename": "mask_0.npy",
+  "mask": [[0, 0, 1], [0, 1, 1], [1, 1, 1]]
+}
+```
+
+**Error responses**
+
+| Status | Condition | Body |
+|--------|-----------|------|
+| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
+| `404 Not Found` | File doesn't exist at `working/segmentation-outputs/masks/side/<filename>` | `{"detail": "File '<filename>' not found."}` |
+| `500 Internal Server Error` | The file exists but couldn't be loaded/parsed as a numpy array | `{"detail": "Error reading the segmentation file: <error message>"}` |
 
 ---
 
@@ -415,7 +514,7 @@ curl "http://localhost:8000/result/classification/side"
 
 ### `GET /result/classification/top/{category}/{filename}`
 
-Downloads a specific classified `.npy` file for the **top view** from a given category subfolder.
+Downloads a specific classified `.npy` file for the **top view** from a given category subfolder, as a raw binary file.
 
 **Request**
 
@@ -439,9 +538,48 @@ curl -O "http://localhost:8000/result/classification/top/biriyani/crop_0.npy"
 
 ---
 
+### `GET /result/classification/top/content/{category}/{filename}`
+
+Loads a specific classified `.npy` file for the **top view** from a given category subfolder and returns its contents inline as JSON, instead of as a binary download.
+
+**Request**
+
+| Path param | Type | Description |
+|------------|------|-------------|
+| `category` | string | Category subfolder name, e.g. `biriyani` |
+| `filename` | string | Must end in `.npy`, e.g. `crop_0.npy` |
+
+```
+GET /result/classification/top/content/{category}/{filename}
+```
+
+```bash
+curl "http://localhost:8000/result/classification/top/content/biriyani/crop_0.npy"
+```
+
+**Response** `200 OK`
+```json
+{
+  "ok": true,
+  "category": "biriyani",
+  "filename": "crop_0.npy",
+  "mask": [[12, 45, 78], [33, 91, 20]]
+}
+```
+
+**Error responses**
+
+| Status | Condition | Body |
+|--------|-----------|------|
+| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
+| `404 Not Found` | File doesn't exist at `working/categorized_top_npy/<category>/<filename>` | `{"detail": "File '<filename>' not found in category '<category>'."}` |
+| `500 Internal Server Error` | The file exists but couldn't be loaded/parsed as a numpy array | `{"detail": "Error reading the classification file: <error message>"}` |
+
+---
+
 ### `GET /result/classification/side/{category}/{filename}`
 
-Downloads a specific classified `.npy` file for the **side view** from a given category subfolder.
+Downloads a specific classified `.npy` file for the **side view** from a given category subfolder, as a raw binary file.
 
 **Request**
 
@@ -465,6 +603,45 @@ curl -O "http://localhost:8000/result/classification/side/biriyani/crop_0.npy"
 
 ---
 
+### `GET /result/classification/side/content/{category}/{filename}`
+
+Loads a specific classified `.npy` file for the **side view** from a given category subfolder and returns its contents inline as JSON, instead of as a binary download.
+
+**Request**
+
+| Path param | Type | Description |
+|------------|------|-------------|
+| `category` | string | Category subfolder name, e.g. `biriyani` |
+| `filename` | string | Must end in `.npy`, e.g. `crop_0.npy` |
+
+```
+GET /result/classification/side/content/{category}/{filename}
+```
+
+```bash
+curl "http://localhost:8000/result/classification/side/content/biriyani/crop_0.npy"
+```
+
+**Response** `200 OK`
+```json
+{
+  "ok": true,
+  "category": "biriyani",
+  "filename": "crop_0.npy",
+  "mask": [[12, 45, 78], [33, 91, 20]]
+}
+```
+
+**Error responses**
+
+| Status | Condition | Body |
+|--------|-----------|------|
+| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
+| `404 Not Found` | File doesn't exist at `working/categorized_side_npy/<category>/<filename>` | `{"detail": "File '<filename>' not found in category '<category>'."}` |
+| `500 Internal Server Error` | The file exists but couldn't be loaded/parsed as a numpy array | `{"detail": "Error reading the classification file: <error message>"}` |
+
+---
+
 ## Typical usage flow
 
 ```bash
@@ -480,7 +657,13 @@ curl -X POST "http://localhost:8000/process"
 # 4. (Optional) Inspect intermediate segmentation / classification outputs
 curl "http://localhost:8000/result/segmentation/top"
 curl "http://localhost:8000/result/classification/top"
+
+# 4a. Download a raw .npy mask/crop as a binary file
 curl -O "http://localhost:8000/result/segmentation/top/mask_0.npy"
+
+# 4b. Or fetch the same array's contents directly as JSON (no download needed)
+curl "http://localhost:8000/result/segmentation/top/content/mask_0.npy"
+curl "http://localhost:8000/result/classification/top/content/biriyani/crop_0.npy"
 ```
 
 ---
@@ -503,4 +686,5 @@ Any food classified outside this list is skipped in the nutrition report (with a
 - Model artifacts referenced by the notebooks must be placed under `app/models/classifier`, `app/models/segmentation`, and `app/models/thumb` before `/process` will succeed.
 - The `/result/segmentation/*` and `/result/classification/*` endpoints only return data after a successful `/process` run — they'll 404 on a fresh working directory.
 - All `/result/.../{filename}` and `/result/.../{category}/{filename}` download endpoints strictly require a `.npy` extension; any other extension is rejected with `400`.
+- The `.../content/...` variants of the segmentation/classification endpoints load the array with `numpy.load(..., allow_pickle=False)` (disallowing pickled objects as a security precaution) and return it as nested JSON lists instead of a binary file — convenient for quick inspection or for clients that can't easily parse `.npy`, but note this can produce very large JSON payloads for big arrays.
 - The static UI mount (`/ui`) is present in code but currently commented out; uncomment it once a `ui/index.html` is available.

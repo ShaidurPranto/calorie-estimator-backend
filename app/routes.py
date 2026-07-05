@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import glob
 from fastapi.responses import FileResponse
+import numpy as np
 
 from app.main import app, WORKING_DIR
 from app.helpers import (
@@ -19,10 +20,26 @@ from app.helpers import (
 )
 
 
+
+@app.get("/")
+def root():
+    """Redirect to the UI test page if present, otherwise return a short message."""
+    return {"message": "server is running"}
+
+
 @app.get("/test")
 async def test_api():
     """Test endpoint for API validation."""
     return JSONResponse({"ok": True, "message": "API is working correctly."})
+
+
+################################
+################################
+################################
+# basic apis to make estimation
+################################
+################################
+################################
 
 
 @app.post("/upload/top")
@@ -55,12 +72,6 @@ async def upload_side(file: UploadFile = File(...)):
     await _save_upload_file(file, dest)
     
     return JSONResponse({"ok": True, "saved_as": str(dest)})
-
-
-@app.get("/")
-def root():
-    """Redirect to the UI test page if present, otherwise return a short message."""
-    return {"message": "server is running"}
 
 
 @app.post("/process")
@@ -125,6 +136,15 @@ async def process():
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+
+################################
+################################
+################################
+# results of processing
+################################
+################################
+################################
 
 
 @app.get("/result/segmentation/top")
@@ -239,6 +259,13 @@ async def get_side_classification_results():
         "categories": categorized_files
     })
 
+################################
+################################
+################################
+# fetching actual numpy file
+################################
+################################
+################################
 
 @app.get("/result/segmentation/top/{filename}")
 async def get_top_segmentation_file(filename: str):
@@ -379,3 +406,191 @@ async def get_side_classification_file(
         filename=filename,
         media_type="application/octet-stream"
     )
+
+
+################################
+################################
+################################
+# fetching numpy file content
+################################
+################################
+################################
+
+
+@app.get("/result/segmentation/top/content/{filename}")
+async def get_top_segmentation_file_content(filename: str):
+    """
+    Load a specific segmentation .npy file from:
+    working/segmentation-outputs/masks/top
+    and return its contents as a JSON response.
+    """
+
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "segmentation-outputs"
+        / "masks"
+        / "top"
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found."
+        )
+
+    try:
+        # Load the numpy array from disk
+        # allow_pickle=False is a good security practice if you're just loading standard arrays
+        array_data = np.load(target_file, allow_pickle=False)
+        
+        # Convert the numpy array to a standard nested Python list so it can be JSON serialized
+        mask_list = array_data.tolist()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading or parsing the segmentation file: {str(e)}"
+        )
+
+    return JSONResponse({
+        "ok": True,
+        "filename": filename,
+        "mask": mask_list
+    })
+
+
+
+@app.get("/result/segmentation/side/content/{filename}")
+async def get_side_segmentation_file_content(filename: str):
+    """
+    Load a specific segmentation .npy file from:
+    working/segmentation-outputs/masks/side
+    and return its contents as a JSON response.
+    """
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "segmentation-outputs"
+        / "masks"
+        / "side"
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found."
+        )
+
+    try:
+        array_data = np.load(target_file, allow_pickle=False)
+        mask_list = array_data.tolist()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading the segmentation file: {str(e)}"
+        )
+
+    return JSONResponse({
+        "ok": True,
+        "filename": filename,
+        "mask": mask_list
+    })
+
+
+@app.get("/result/classification/top/content/{category}/{filename}")
+async def get_top_classification_file_content(category: str, filename: str):
+    """
+    Load a specific classified .npy file from:
+    working/categorized_top_npy/<category>/
+    and return its contents as a JSON response.
+    """
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "categorized_top_npy"
+        / category
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found in category '{category}'."
+        )
+
+    try:
+        array_data = np.load(target_file, allow_pickle=False)
+        mask_list = array_data.tolist()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading the classification file: {str(e)}"
+        )
+
+    return JSONResponse({
+        "ok": True,
+        "category": category,
+        "filename": filename,
+        "mask": mask_list
+    })
+
+
+@app.get("/result/classification/side/content/{category}/{filename}")
+async def get_side_classification_file_content(category: str, filename: str):
+    """
+    Download a specific classified .npy file from:
+    working/categorized_side_npy/<category>/<filename>
+    and return its contents as a JSON response.
+    """
+    if not filename.endswith(".npy"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .npy files are allowed."
+        )
+
+    target_file = (
+        WORKING_DIR
+        / "categorized_side_npy"
+        / category
+        / filename
+    )
+
+    if not target_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"File '{filename}' not found in category '{category}'."
+        )
+
+    try:
+        array_data = np.load(target_file, allow_pickle=False)
+        mask_list = array_data.tolist()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading the classification file: {str(e)}"
+        )
+
+    return JSONResponse({
+        "ok": True,
+        "category": category,
+        "filename": filename,
+        "mask": mask_list
+    })
