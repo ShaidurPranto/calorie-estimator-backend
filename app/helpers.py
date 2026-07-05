@@ -21,6 +21,21 @@ def get_subfolders_with_npy(directory: Path):
     return result
 
 
+def _clear_existing_files(directory: Path, prefix: str) -> None:
+    """Finds and deletes any files in the directory that start with the given prefix."""
+    if not directory.exists():
+        return
+        
+    for file_path in directory.iterdir():
+        # Check if it's a file and starts with 'top' or 'side'
+        if file_path.is_file() and file_path.name.startswith(prefix):
+            try:
+                file_path.unlink()
+            except OSError:
+                # Handle cases where the file might be locked or already deleted
+                pass
+
+
 def _safe_extension(filename: str) -> str:
     """Return a safe extension (including leading dot) from the original filename.
     Falls back to `.jpg` when unknown.
@@ -28,7 +43,6 @@ def _safe_extension(filename: str) -> str:
     ext = Path(filename).suffix
     if not ext:
         return ".jpg"
-    # Keep only simple alphanumeric + dot extensions like .jpg, .png, .jpeg
     ext = ext.lower()
     if ext.startswith('.') and 1 < len(ext) <= 5:
         return ext
@@ -36,7 +50,9 @@ def _safe_extension(filename: str) -> str:
 
 
 async def _save_upload_file(upload: UploadFile, dest_path: Path) -> None:
-    # Read and write in chunks to avoid large memory usage
+    # Ensure parent directory exists just in case
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    
     try:
         with dest_path.open("wb") as f:
             while True:

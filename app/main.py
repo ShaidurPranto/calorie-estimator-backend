@@ -26,4 +26,4 @@ if __name__ == "__main__":
 
 
 # lt --port 8000 --subdomain calorie
-# uvicorn app.api:app --reload --host 0.0.0.0 --port 8000
+# uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

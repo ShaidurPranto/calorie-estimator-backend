@@ -14,7 +14,8 @@ from app.helpers import (
     analyze_food_volume,
     display_food_views,
     get_npy_files,
-    get_subfolders_with_npy
+    get_subfolders_with_npy,
+    _clear_existing_files
 )
 
 
@@ -26,25 +27,33 @@ async def test_api():
 
 @app.post("/upload/top")
 async def upload_top(file: UploadFile = File(...)):
-    """Upload the top view image and save as `top<ext>` in `app/working/input_images`.
-
-    The original file extension is preserved.
-    """
+    """Upload the top view image, delete any existing top images, and save the new one."""
     ext = _safe_extension(file.filename)
-    dest = WORKING_DIR / "input_images" / f"top{ext}"
+    target_dir = WORKING_DIR / "input_images"
+    dest = target_dir / f"top{ext}"
+    
+    # 1. Clear out any old 'top' images (e.g., top.png, top.jpeg)
+    _clear_existing_files(target_dir, "top")
+    
+    # 2. Save the new file
     await _save_upload_file(file, dest)
+    
     return JSONResponse({"ok": True, "saved_as": str(dest)})
 
 
 @app.post("/upload/side")
 async def upload_side(file: UploadFile = File(...)):
-    """Upload the side view image and save as `side<ext>` in `app/working/input_images`.
-
-    The original file extension is preserved.
-    """
+    """Upload the side view image, delete any existing side images, and save the new one."""
     ext = _safe_extension(file.filename)
-    dest = WORKING_DIR / "input_images" / f"side{ext}"
+    target_dir = WORKING_DIR / "input_images"
+    dest = target_dir / f"side{ext}"
+    
+    # 1. Clear out any old 'side' images (e.g., side.png, side.jpeg)
+    _clear_existing_files(target_dir, "side")
+    
+    # 2. Save the new file
     await _save_upload_file(file, dest)
+    
     return JSONResponse({"ok": True, "saved_as": str(dest)})
 
 
@@ -95,7 +104,7 @@ async def process():
         vol_main()
 
         # Generate final output
-        display_food_views(WORKING_DIR / "input_images")
+        # display_food_views(WORKING_DIR / "input_images")
         final_output_path = WORKING_DIR / "final_nutrition_output.json"
         analyze_food_volume(WORKING_DIR / "food_volumes_summary.json", final_output_path)
 
