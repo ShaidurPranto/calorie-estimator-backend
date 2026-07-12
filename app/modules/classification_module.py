@@ -18,9 +18,10 @@ class FoodClassifier:
         """
         Initialize the FoodClassifier.
         """
-        self.model_path = BASE_DIR / "models" / "classifier" / "model_1_vit_segment_aware.pth"
-        self.labels_path = BASE_DIR / "models" / "classifier" / "labels.txt"
-        self.num_classes = 19
+        self.model_path = BASE_DIR / "models" / "classifier" / "v2" / "model_1_vit_segment_aware.pth"
+        self.labels_path = BASE_DIR / "models" / "classifier" / "v2" / "labels.txt"
+        # self.num_classes = 19  # this is for v1
+        self.num_classes = 7   # this is for v2
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Load labels
@@ -72,7 +73,8 @@ class FoodClassifier:
 
         # Create model architecture
         model = timm.create_model(
-            "vit_small_patch16_224",
+            "vit_base_patch16_224_in21k", # this is for v2
+            # "vit_small_patch16_224", # this is for v1
             pretrained=False,
             num_classes=self.num_classes
         )

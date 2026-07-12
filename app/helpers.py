@@ -90,6 +90,7 @@ def clean_working_directory():
             print(f"Failed to delete {item}. Reason: {e}")
 
 
+
 def analyze_food_volume(input_json_path, output_json_path="food_nutrition_report.json"):
 
     KCAL_PER_G = {"carbohydrates": 4, "protein": 4, "fat": 9, "fiber": 2}
@@ -114,6 +115,15 @@ def analyze_food_volume(input_json_path, output_json_path="food_nutrition_report
         "egg_omlete":    {"carbohydrates":0.01,"fiber":0.00,"protein":0.11,"fat":0.12,"sodium_mg":0.55,"calcium_mg":0.05,"iron_mg":0.015,"vit_a_ug":1.5,"vit_c_mg":0.0,"vit_d_ug":0.9},
         "beguni":        {"carbohydrates":0.18,"fiber":0.02,"protein":0.03,"fat":0.16,"sodium_mg":0.30,"calcium_mg":0.01,"iron_mg":0.005,"vit_a_ug":0.0,"vit_c_mg":0.8,"vit_d_ug":0.0},
         "chickpeas":     {"carbohydrates":0.24,"fiber":0.07,"protein":0.08,"fat":0.05,"sodium_mg":0.15,"calcium_mg":0.05,"iron_mg":0.025,"vit_a_ug":0.1,"vit_c_mg":0.5,"vit_d_ug":0.0},
+
+        # ── Fruits (per-gram values derived from USDA raw-fruit data, per 100g / 100) ──
+        "apple":         {"carbohydrates":0.138,"fiber":0.024,"protein":0.003,"fat":0.002,"sodium_mg":0.01,"calcium_mg":0.06,"iron_mg":0.0012,"vit_a_ug":0.03,"vit_c_mg":0.046,"vit_d_ug":0.0},
+        "banana":        {"carbohydrates":0.228,"fiber":0.026,"protein":0.011,"fat":0.003,"sodium_mg":0.01,"calcium_mg":0.05,"iron_mg":0.0026,"vit_a_ug":0.03,"vit_c_mg":0.087,"vit_d_ug":0.0},
+        "grape":         {"carbohydrates":0.181,"fiber":0.009,"protein":0.0072,"fat":0.0016,"sodium_mg":0.02,"calcium_mg":0.10,"iron_mg":0.0036,"vit_a_ug":0.03,"vit_c_mg":0.032,"vit_d_ug":0.0},
+        "mango":         {"carbohydrates":0.150,"fiber":0.016,"protein":0.0082,"fat":0.0038,"sodium_mg":0.01,"calcium_mg":0.11,"iron_mg":0.0016,"vit_a_ug":0.54,"vit_c_mg":0.364,"vit_d_ug":0.0},
+        "orange":        {"carbohydrates":0.1175,"fiber":0.024,"protein":0.0094,"fat":0.0012,"sodium_mg":0.00,"calcium_mg":0.40,"iron_mg":0.0010,"vit_a_ug":0.11,"vit_c_mg":0.532,"vit_d_ug":0.0},
+        "pine_apple":    {"carbohydrates":0.131,"fiber":0.014,"protein":0.0054,"fat":0.0012,"sodium_mg":0.01,"calcium_mg":0.13,"iron_mg":0.0029,"vit_a_ug":0.03,"vit_c_mg":0.478,"vit_d_ug":0.0},
+        "watermelon":    {"carbohydrates":0.0755,"fiber":0.004,"protein":0.0061,"fat":0.0015,"sodium_mg":0.01,"calcium_mg":0.07,"iron_mg":0.0024,"vit_a_ug":0.28,"vit_c_mg":0.081,"vit_d_ug":0.0},
     }
 
     def bar(val, total, width=20):
@@ -225,7 +235,6 @@ def analyze_food_volume(input_json_path, output_json_path="food_nutrition_report
         json.dump(final_output, out, indent=2)
 
     print(f"[✓] Report saved → {output_json_path}\n")
-
 
 def display_food_views(folder_path):
     valid_extensions = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']
