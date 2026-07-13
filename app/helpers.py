@@ -90,6 +90,27 @@ def clean_working_directory():
             print(f"Failed to delete {item}. Reason: {e}")
 
 
+def clean_working_directory_all():
+    BASE_DIR = Path(__file__).resolve().parents[1]
+    working_dir = BASE_DIR / "app" / "working"
+
+    # Ensure the base directory exists before attempting to loop
+    if not working_dir.exists():
+        print(f"Directory {working_dir} does not exist.")
+        return
+
+    # Iterate over everything inside /working
+    for item in working_dir.iterdir():
+        try:
+            if item.is_file() or item.is_symlink():
+                item.unlink()  # Deletes files or symlinks
+            elif item.is_dir():
+                shutil.rmtree(item)  # Deletes directories and their contents
+            print(f"Deleted: {item}")
+        except Exception as e:
+            print(f"Failed to delete {item}. Reason: {e}")
+
+
 
 def analyze_food_volume(input_json_path, output_json_path="food_nutrition_report.json"):
 

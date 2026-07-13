@@ -16,7 +16,8 @@ from app.helpers import (
     display_food_views,
     get_npy_files,
     get_subfolders_with_npy,
-    _clear_existing_files
+    _clear_existing_files,
+    clean_working_directory_all
 )
 
 
@@ -94,7 +95,7 @@ async def process():
     
 
     # delete everything from /working except /working/input_images
-    clean_working_directory()
+    # clean_working_directory()
 
     
     try:
@@ -126,6 +127,9 @@ async def process():
         # Read the generated JSON file
         with open(final_output_path, "r") as f:
             nutrition_data = json.load(f)
+
+        # delete the outputs of working directory
+        clean_working_directory_all()
 
         # Return the success message along with the loaded JSON data
         return JSONResponse({
