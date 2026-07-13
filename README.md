@@ -665,26 +665,3 @@ curl -O "http://localhost:8000/result/segmentation/top/mask_0.npy"
 curl "http://localhost:8000/result/segmentation/top/content/mask_0.npy"
 curl "http://localhost:8000/result/classification/top/content/biriyani/crop_0.npy"
 ```
-
----
-
-## Supported foods
-
-The nutrition knowledge base currently covers the following food items (case-insensitive, underscore-separated keys):
-
-`hilsha_fish`, `biriyani`, `khichuri`, `morog_polao`, `yogurt`, `roshgolla`, `porota`, `bakorkhani`, `fuchka`, `roshmalai`, `kacha_golla`, `kala_bhuna`, `haleem`, `mashed_potato`, `nehari`, `kabab`, `egg_omlete`, `beguni`, `chickpeas`
-
-Any food classified outside this list is skipped in the nutrition report (with a warning logged to the console) but does not fail the request.
-
----
-
-## Notes & caveats
-
-- CORS is currently wide open (`allow_origins=["*"]`) — restrict this before deploying publicly.
-- `/upload/top` and `/upload/side` overwrite the previous file of the same view; there's no per-session/user isolation, so concurrent uploads from different clients will collide.
-- `/process` deletes all prior outputs in `app/working/` (except `input_images/`) on every call.
-- Model artifacts referenced by the notebooks must be placed under `app/models/classifier`, `app/models/segmentation`, and `app/models/thumb` before `/process` will succeed.
-- The `/result/segmentation/*` and `/result/classification/*` endpoints only return data after a successful `/process` run — they'll 404 on a fresh working directory.
-- All `/result/.../{filename}` and `/result/.../{category}/{filename}` download endpoints strictly require a `.npy` extension; any other extension is rejected with `400`.
-- The `.../content/...` variants of the segmentation/classification endpoints load the array with `numpy.load(..., allow_pickle=False)` (disallowing pickled objects as a security precaution) and return it as nested JSON lists instead of a binary file — convenient for quick inspection or for clients that can't easily parse `.npy`, but note this can produce very large JSON payloads for big arrays.
-- The static UI mount (`/ui`) is present in code but currently commented out; uncomment it once a `ui/index.html` is available.
