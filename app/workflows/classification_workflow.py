@@ -13,5 +13,5 @@ def class_main():
     # classifier.classify_and_display_folder(DIRECTORY_PATH / "top_segments/")
     # classifier.classify_and_display_folder(DIRECTORY_PATH / "side_segments/")
 
-    valid_labels = classifier.classify_and_copy_folder(DIRECTORY_PATH / "top_segments/", DIRECTORY_PATH / "categorized_top", 0.1)
-    classifier.classify_and_copy_folder_with_label_filter(DIRECTORY_PATH / "side_segments/", DIRECTORY_PATH / "categorized_side", valid_labels, 0.1)
+    valid_labels = classifier.classify_and_copy_folder(DIRECTORY_PATH / "top_segments/", DIRECTORY_PATH / "categorized_top", 0.8)
+    classifier.classify_and_copy_folder_with_label_filter(DIRECTORY_PATH / "side_segments/", DIRECTORY_PATH / "categorized_side", valid_labels, 0.8)
