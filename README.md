@@ -398,7 +398,7 @@ curl "http://localhost:8000/result/segmentation/side/content/mask_0.npy"
 
 ### `GET /result/classification/top`
 
-Lists all category subfolders and their `.npy` files from `working/categorized_top_npy`. Each classified food crop is grouped into a subfolder named after its predicted category.
+Lists all category subfolders and their `.npy` files from `working/categorized_top_npy`. Each classified food mask is grouped into a subfolder named after its predicted category.
 
 **Request**
 ```
@@ -415,8 +415,8 @@ curl "http://localhost:8000/result/classification/top"
   "ok": true,
   "directory": "categorized_top_npy",
   "categories": {
-    "biriyani": ["crop_0.npy"],
-    "yogurt": ["crop_1.npy", "crop_2.npy"]
+    "biriyani": ["mask_0.npy"],
+    "yogurt": ["mask_1.npy", "mask_2.npy"]
   }
 }
 ```
@@ -448,8 +448,8 @@ curl "http://localhost:8000/result/classification/side"
   "ok": true,
   "directory": "categorized_side_npy",
   "categories": {
-    "biriyani": ["crop_0.npy"],
-    "yogurt": ["crop_1.npy", "crop_2.npy"]
+    "biriyani": ["mask_0.npy"],
+    "yogurt": ["mask_2.npy"]
   }
 }
 ```
@@ -471,14 +471,14 @@ Loads a specific classified `.npy` file for the **top view** from a given catego
 | Path param | Type | Description |
 |------------|------|-------------|
 | `category` | string | Category subfolder name, e.g. `biriyani` |
-| `filename` | string | Must end in `.npy`, e.g. `crop_0.npy` |
+| `filename` | string | Must end in `.npy`, e.g. `mask_0.npy` |
 
 ```
 GET /result/classification/top/content/{category}/{filename}
 ```
 
 ```bash
-curl "http://localhost:8000/result/classification/top/content/biriyani/crop_0.npy"
+curl "http://localhost:8000/result/classification/top/content/biriyani/mask_0.npy"
 ```
 
 **Response** `200 OK`
@@ -486,7 +486,7 @@ curl "http://localhost:8000/result/classification/top/content/biriyani/crop_0.np
 {
   "ok": true,
   "category": "biriyani",
-  "filename": "crop_0.npy",
+  "filename": "mask_0.npy",
   "mask": [[12, 45, 78], [33, 91, 20]]
 }
 ```
@@ -510,14 +510,14 @@ Loads a specific classified `.npy` file for the **side view** from a given categ
 | Path param | Type | Description |
 |------------|------|-------------|
 | `category` | string | Category subfolder name, e.g. `biriyani` |
-| `filename` | string | Must end in `.npy`, e.g. `crop_0.npy` |
+| `filename` | string | Must end in `.npy`, e.g. `mask_0.npy` |
 
 ```
 GET /result/classification/side/content/{category}/{filename}
 ```
 
 ```bash
-curl "http://localhost:8000/result/classification/side/content/biriyani/crop_0.npy"
+curl "http://localhost:8000/result/classification/side/content/biriyani/mask_0.npy"
 ```
 
 **Response** `200 OK`
@@ -525,7 +525,7 @@ curl "http://localhost:8000/result/classification/side/content/biriyani/crop_0.n
 {
   "ok": true,
   "category": "biriyani",
-  "filename": "crop_0.npy",
+  "filename": "mask_0.npy",
   "mask": [[12, 45, 78], [33, 91, 20]]
 }
 ```
