@@ -42,7 +42,7 @@ def class_main():
     create_json_file(progress_dir, f"classification_top.json")
     print(f"file created: classification_top.json")
 
-    classifier.classify_and_copy_folder_with_label_filter(DIRECTORY_PATH / "side_segments/", DIRECTORY_PATH / "categorized_side", valid_labels, 0.8)
+    classifier.classify_and_copy_folder_with_label_filter(DIRECTORY_PATH / "side_segments/", DIRECTORY_PATH / "categorized_side", valid_labels, 0.6)
 
     # progress tracking code block
     progress_dir = os.path.join(DIRECTORY_PATH, "progress")

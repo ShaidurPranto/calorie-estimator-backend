@@ -143,41 +143,6 @@ button{ font-family: inherit; }
 }
 
 /* ===========================================================
-   Session actions (start-over control)
-=========================================================== */
-.session-actions{
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin: 0 28px 24px;
-  padding: 14px 18px;
-  background: var(--teal-dim);
-  border: 1px solid var(--teal);
-  border-radius: var(--radius);
-  animation: rise 0.4s ease both;
-}
-.session-actions__text{
-  font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--teal);
-}
-.session-actions__btn{
-  margin-left: auto;
-  background: var(--teal);
-  color: #0F1114;
-  border: none;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 13px;
-  padding: 9px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-.session-actions__btn:hover{ opacity: 0.9; }
-.session-actions__btn:active{ transform: scale(0.97); }
-
-/* ===========================================================
    Deck / layout — vertical stack per the brief
 =========================================================== */
 .deck{
@@ -410,7 +375,47 @@ button{ font-family: inherit; }
   .scope-bar__endpoint input{ width: 100%; }
   .hero{ padding: 40px 18px 8px; }
   .pipeline-rail{ margin: 24px 18px; }
-  .session-actions{ margin: 0 18px 24px; flex-wrap: wrap; }
-  .session-actions__btn{ margin-left: 0; width: 100%; }
   .deck{ padding: 0 18px 48px; }
+}
+
+
+/* .deck {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+} */
+
+/* optional: let report/log span differently if you want, e.g. */
+/* .report-card, .log-card { grid-column: span 1; } */
+
+.deck{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  padding: 0 28px 64px;
+  max-width: 1200px;   /* was 760px — this was the real culprit */
+  align-items: start;
+}
+
+/* keep report + log full-width under the two scan cards, OR side-by-side too — your call */
+.report-card,
+.log-card{
+  grid-column: span 2;   /* remove this line if you want them side-by-side instead */
+}
+
+.report-card{ grid-column: 1; }
+.log-card{ grid-column: 2; }
+
+@media (max-width: 720px){
+  .deck{ grid-template-columns: 1fr; }
+  .report-card, .log-card{ grid-column: 1; }
+}
+
+.hero,
+.pipeline-rail,
+.deck{
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 }

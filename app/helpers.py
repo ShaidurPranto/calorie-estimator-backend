@@ -6,17 +6,37 @@ import os
 from fastapi.encoders import jsonable_encoder
 
 
+# def get_npy_files(directory: Path):
+#     return sorted([f.name for f in directory.glob("*.npy")])
+
+
 def get_npy_files(directory: Path):
-    return sorted([f.name for f in directory.glob("*.npy")])
+    if not directory.exists():
+        return []
+
+    return sorted(f.name for f in directory.glob("*.npy"))
+
+
+# def get_subfolders_with_npy(directory: Path):
+#     result = {}
+
+#     for subdir in sorted(directory.iterdir()):
+#         if subdir.is_dir():
+#             npy_files = get_npy_files(subdir)
+#             result[subdir.name] = npy_files
+
+#     return result
 
 
 def get_subfolders_with_npy(directory: Path):
+    if not directory.exists():
+        return {}
+
     result = {}
 
     for subdir in sorted(directory.iterdir()):
         if subdir.is_dir():
-            npy_files = get_npy_files(subdir)
-            result[subdir.name] = npy_files
+            result[subdir.name] = get_npy_files(subdir)
 
     return result
 
