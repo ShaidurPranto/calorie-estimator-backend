@@ -5,8 +5,8 @@
      Config
   ========================================================= */
   const CONFIG = {
-    INITIAL_DELAY_MS: 5000,     // wait after /process is fired before first segmentation check
-    POLL_INTERVAL_MS: 3500,     // gap between "not ready yet" retries
+    INITIAL_DELAY_MS: 8000,     // wait after /process is fired before first segmentation check
+    POLL_INTERVAL_MS: 5000,     // gap between "not ready yet" retries
     MAX_POLL_ATTEMPTS: 40,      // ~2.5 min ceiling per stage before giving up
   };
 
@@ -426,7 +426,8 @@
   }
 
   function drawLabel(ctx, text, x, y, color) {
-    ctx.font = "600 13px 'IBM Plex Mono', monospace";
+    // ctx.font = "600 13px 'IBM Plex Mono', monospace";
+    ctx.font = "600 33px 'IBM Plex Mono', monospace";    
     const padX = 9, padY = 6;
     const w = ctx.measureText(text).width + padX * 2;
     const h = 22;

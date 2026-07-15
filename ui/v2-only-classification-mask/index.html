@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meal Scan — Calorie Estimator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="scope-bar">
+    <div class="scope-brand">
+      <span class="scope-brand__mark">◉</span>
+      <span class="scope-brand__name">MEAL SCAN</span>
+    </div>
+    <div class="scope-bar__endpoint">
+      <label for="apiBase">API base</label>
+      <input type="text" id="apiBase" value="http://localhost:8000" spellcheck="false" autocomplete="off" />
+    </div>
+  </div>
+
+  <header class="hero">
+    <h1 class="hero__title">Two angles.<br/>One plate, fully read.</h1>
+    <p class="hero__sub">Upload a top view and a side view. The pipeline segments what's on the plate, classifies each piece, and estimates volume &amp; nutrition — while you watch it happen.</p>
+  </header>
+
+  <ol class="pipeline-rail" id="pipelineRail" aria-label="Pipeline stages">
+    <li class="pipeline-rail__stage" data-stage="upload"><span class="pipeline-rail__dot"></span>Upload</li>
+    <li class="pipeline-rail__stage" data-stage="process"><span class="pipeline-rail__dot"></span>Process queued</li>
+    <li class="pipeline-rail__stage" data-stage="classify"><span class="pipeline-rail__dot"></span>Classifying</li>
+    <li class="pipeline-rail__stage" data-stage="report"><span class="pipeline-rail__dot"></span>Nutrition report</li>
+  </ol>
+
+  <div class="session-actions" id="sessionActions" hidden>
+    <span class="session-actions__text">Scan complete.</span>
+    <button class="session-actions__btn" id="startOverBtn" type="button">Scan another meal</button>
+  </div>
+
+  <main class="deck">
+
+    <!-- TOP VIEW PANEL -->
+    <section class="scan-card" id="panel-top" data-view="top">
+      <div class="scan-card__head">
+        <h2><span class="scan-card__index">01</span> Top view</h2>
+        <span class="scan-card__status" data-role="status">Waiting for image</span>
+      </div>
+
+      <div class="scan-stage" data-role="stage">
+        <div class="scan-stage__empty" data-role="empty">
+          <label class="drop-zone" data-role="dropzone">
+            <input type="file" accept="image/*" data-role="file-input" hidden />
+            <span class="drop-zone__icon">⤒</span>
+            <span class="drop-zone__label">Drop or choose the top-view photo</span>
+          </label>
+        </div>
+
+        <div class="scan-stage__canvas-wrap" data-role="canvas-wrap" hidden>
+          <img data-role="base-image" class="scan-stage__img" alt="Top view of the meal" />
+          <canvas data-role="mask-canvas" class="scan-stage__canvas"></canvas>
+          <div class="scan-stage__sweep" data-role="sweep"></div>
+          <button class="scan-stage__replace" data-role="replace" type="button" title="Replace image">↻ replace</button>
+        </div>
+      </div>
+
+      <ul class="scan-card__legend" data-role="legend"></ul>
+    </section>
+
+    <!-- SIDE VIEW PANEL -->
+    <section class="scan-card" id="panel-side" data-view="side">
+      <div class="scan-card__head">
+        <h2><span class="scan-card__index">02</span> Side view</h2>
+        <span class="scan-card__status" data-role="status">Waiting for image</span>
+      </div>
+
+      <div class="scan-stage" data-role="stage">
+        <div class="scan-stage__empty" data-role="empty">
+          <label class="drop-zone" data-role="dropzone">
+            <input type="file" accept="image/*" data-role="file-input" hidden />
+            <span class="drop-zone__icon">⤒</span>
+            <span class="drop-zone__label">Drop or choose the side-view photo</span>
+          </label>
+        </div>
+
+        <div class="scan-stage__canvas-wrap" data-role="canvas-wrap" hidden>
+          <img data-role="base-image" class="scan-stage__img" alt="Side view of the meal" />
+          <canvas data-role="mask-canvas" class="scan-stage__canvas"></canvas>
+          <div class="scan-stage__sweep" data-role="sweep"></div>
+          <button class="scan-stage__replace" data-role="replace" type="button" title="Replace image">↻ replace</button>
+        </div>
+      </div>
+
+      <ul class="scan-card__legend" data-role="legend"></ul>
+    </section>
+
+    <!-- REPORT PANEL -->
+    <section class="report-card" id="reportCard" hidden>
+      <div class="report-card__head">
+        <h2><span class="scan-card__index">03</span> Nutrition report</h2>
+        <span class="report-card__total" data-role="report-total"></span>
+      </div>
+      <div class="report-card__body" data-role="report-body"></div>
+    </section>
+
+    <div class="log-card">
+      <div class="log-card__head">
+        <h3>Activity log</h3>
+        <button class="log-card__clear" id="clearLog" type="button">clear</button>
+      </div>
+      <ol class="log-card__list" id="logList"></ol>
+    </div>
+
+  </main>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

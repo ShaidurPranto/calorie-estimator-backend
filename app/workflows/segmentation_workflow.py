@@ -18,6 +18,25 @@ if str(MODULES_DIR) not in sys.path:
 
 from app.modules.segmentation_module import SegmentationModule
 
+def create_json_file(directory_path, file_name):
+    """Creates an empty .json file with the given name in the specified directory."""
+    # Ensure the file name ends with .json
+    if not file_name.endswith(".json"):
+        file_name += ".json"
+
+    # Combine the directory path and file name safely
+    file_path = os.path.join(directory_path, file_name)
+
+    # Optional: Create the directory if it doesn't exist yet
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
+    # Write an empty JSON object ({}) to the file
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump({}, json_file)
+
+    print(f"Successfully created: {file_path}")
+
 
 def seg_main():
     """
@@ -144,6 +163,11 @@ def seg_main():
         print(f"  ⏱  {elapsed:.2f}s\n")
 
         seg.clear_cache()
+
+        # progresss tracking code block
+        progress_dir = os.path.join(WORK_DIR, "progress")
+        create_json_file(progress_dir, f"segmentation_{base_name}.json")
+        print(f"file created: segmentation_{base_name}.json")
 
     total_elapsed = time.time() - total_start
     print(f"All done! Total time: {total_elapsed:.2f}s")

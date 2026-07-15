@@ -158,27 +158,21 @@ async def get_top_segmentation_results():
     working/segmentation-outputs/masks/top
     """
 
-    # at first it should check whether the output directory for segmentation of side image exists or not
-    # if segmentation result for side image exists then it means segmenation for top image has been done
-    target_dir = (
-        WORKING_DIR
-        / "segmentation-outputs"
-        / "masks"
-        / "side"
-    )
-
-    if not target_dir.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Directory not found: {target_dir}"
-        )
-
     target_dir = (
         WORKING_DIR
         / "segmentation-outputs"
         / "masks"
         / "top"
     )
+
+    progress_dir = WORKING_DIR / "progress"
+    done_file = progress_dir / "segmentation_top.json"
+
+    if not progress_dir.exists() or not done_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
 
     npy_files = get_npy_files(target_dir)
 
@@ -196,25 +190,21 @@ async def get_side_segmentation_results():
     working/segmentation-outputs/masks/side
     """
 
-    # to know whether segmentation of side image is completed or not , it should check the top_segments
-    # if that folder exists, it means that segmentation of side image has been completed 
-    target_dir = (
-        WORKING_DIR
-        / "top_segments"
-    )
-
-    if not target_dir.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Directory not found: {target_dir}"
-        )
-
     target_dir = (
         WORKING_DIR
         / "segmentation-outputs"
         / "masks"
         / "side"
     )
+
+    progress_dir = WORKING_DIR / "progress"
+    done_file = progress_dir / "segmentation_side.json"
+
+    if not progress_dir.exists() or not done_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
 
     npy_files = get_npy_files(target_dir)
 
@@ -233,22 +223,19 @@ async def get_top_classification_results():
     working/categorized_top_npy
     """
 
-    # to know if classification for top image is completed, it should check the categorized_side_npy directory
-    target_dir = (
-        WORKING_DIR
-        / "categorized_side_npy"
-    )
-
-    if not target_dir.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Directory not found: {target_dir}"
-        )
-
     target_dir = (
         WORKING_DIR
         / "categorized_top_npy"
     )
+
+    progress_dir = WORKING_DIR / "progress"
+    done_file = progress_dir / "classification_top.json"
+
+    if not progress_dir.exists() or not done_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
 
     categorized_files = get_subfolders_with_npy(target_dir)
 
@@ -266,22 +253,19 @@ async def get_side_classification_results():
     working/categorized_side_npy
     """
 
-    # to know if classification for side image is completed, it should check the categorized_side_npy directory
-    target_dir = (
-        WORKING_DIR
-        / "categorized_side_npy"
-    )
-
-    if not target_dir.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Directory not found: {target_dir}"
-        )
-
     target_dir = (
         WORKING_DIR
         / "categorized_side_npy"
     )    
+
+    progress_dir = WORKING_DIR / "progress"
+    done_file = progress_dir / "classification_side.json"
+
+    if not progress_dir.exists() or not done_file.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Directory not found: {target_dir}"
+        )
 
     categorized_files = get_subfolders_with_npy(target_dir)
 
