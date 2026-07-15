@@ -95,7 +95,7 @@ async def process():
     
 
     # delete everything from /working except /working/input_images
-    # clean_working_directory()
+    clean_working_directory()
 
     
     try:
@@ -129,7 +129,7 @@ async def process():
             nutrition_data = json.load(f)
 
         # delete the outputs of working directory
-        clean_working_directory_all()
+        # clean_working_directory_all()
 
         # Return the success message along with the loaded JSON data
         return JSONResponse({
@@ -290,154 +290,6 @@ async def get_side_classification_results():
         "directory": str(target_dir.relative_to(WORKING_DIR)),
         "categories": categorized_files
     })
-
-################################
-################################
-################################
-# fetching actual numpy file
-################################
-################################
-################################
-
-@app.get("/result/segmentation/top/{filename}")
-async def get_top_segmentation_file(filename: str):
-    """
-    Download a specific segmentation .npy file from:
-    working/segmentation-outputs/masks/top
-    """
-
-    if not filename.endswith(".npy"):
-        raise HTTPException(
-            status_code=400,
-            detail="Only .npy files are allowed."
-        )
-
-    target_file = (
-        WORKING_DIR
-        / "segmentation-outputs"
-        / "masks"
-        / "top"
-        / filename
-    )
-
-    if not target_file.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"File '{filename}' not found."
-        )
-
-    return FileResponse(
-        path=target_file,
-        filename=filename,
-        media_type="application/octet-stream"
-    )
-
-
-@app.get("/result/segmentation/side/{filename}")
-async def get_side_segmentation_file(filename: str):
-    """
-    Download a specific segmentation .npy file from:
-    working/segmentation-outputs/masks/side
-    """
-
-    if not filename.endswith(".npy"):
-        raise HTTPException(
-            status_code=400,
-            detail="Only .npy files are allowed."
-        )
-
-    target_file = (
-        WORKING_DIR
-        / "segmentation-outputs"
-        / "masks"
-        / "side"
-        / filename
-    )
-
-    if not target_file.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"File '{filename}' not found."
-        )
-
-    return FileResponse(
-        path=target_file,
-        filename=filename,
-        media_type="application/octet-stream"
-    )
-
-
-
-@app.get("/result/classification/top/{category}/{filename}")
-async def get_top_classification_file(
-    category: str,
-    filename: str
-):
-    """
-    Download a specific classified .npy file from:
-    working/categorized_top_npy/<category>/
-    """
-
-    if not filename.endswith(".npy"):
-        raise HTTPException(
-            status_code=400,
-            detail="Only .npy files are allowed."
-        )
-
-    target_file = (
-        WORKING_DIR
-        / "categorized_top_npy"
-        / category
-        / filename
-    )
-
-    if not target_file.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"File '{filename}' not found in category '{category}'."
-        )
-
-    return FileResponse(
-        path=target_file,
-        filename=filename,
-        media_type="application/octet-stream"
-    )
-
-
-@app.get("/result/classification/side/{category}/{filename}")
-async def get_side_classification_file(
-    category: str,
-    filename: str
-):
-    """
-    Download a specific classified .npy file from:
-    working/categorized_side_npy/<category>/<filename>
-    """
-
-    if not filename.endswith(".npy"):
-        raise HTTPException(
-            status_code=400,
-            detail="Only .npy files are allowed."
-        )
-
-    target_file = (
-        WORKING_DIR
-        / "categorized_side_npy"
-        / category
-        / filename
-    )
-
-    if not target_file.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"File '{filename}' not found in category '{category}'."
-        )
-
-    return FileResponse(
-        path=target_file,
-        filename=filename,
-        media_type="application/octet-stream"
-    )
 
 
 ################################
@@ -626,3 +478,152 @@ async def get_side_classification_file_content(category: str, filename: str):
         "filename": filename,
         "mask": mask_list
     })
+
+
+################################
+################################
+################################
+# fetching actual numpy file
+################################
+################################
+################################
+
+# @app.get("/result/segmentation/top/{filename}")
+# async def get_top_segmentation_file(filename: str):
+#     """
+#     Download a specific segmentation .npy file from:
+#     working/segmentation-outputs/masks/top
+#     """
+
+#     if not filename.endswith(".npy"):
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Only .npy files are allowed."
+#         )
+
+#     target_file = (
+#         WORKING_DIR
+#         / "segmentation-outputs"
+#         / "masks"
+#         / "top"
+#         / filename
+#     )
+
+#     if not target_file.exists():
+#         raise HTTPException(
+#             status_code=404,
+#             detail=f"File '{filename}' not found."
+#         )
+
+#     return FileResponse(
+#         path=target_file,
+#         filename=filename,
+#         media_type="application/octet-stream"
+#     )
+
+
+# @app.get("/result/segmentation/side/{filename}")
+# async def get_side_segmentation_file(filename: str):
+#     """
+#     Download a specific segmentation .npy file from:
+#     working/segmentation-outputs/masks/side
+#     """
+
+#     if not filename.endswith(".npy"):
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Only .npy files are allowed."
+#         )
+
+#     target_file = (
+#         WORKING_DIR
+#         / "segmentation-outputs"
+#         / "masks"
+#         / "side"
+#         / filename
+#     )
+
+#     if not target_file.exists():
+#         raise HTTPException(
+#             status_code=404,
+#             detail=f"File '{filename}' not found."
+#         )
+
+#     return FileResponse(
+#         path=target_file,
+#         filename=filename,
+#         media_type="application/octet-stream"
+#     )
+
+
+
+# @app.get("/result/classification/top/{category}/{filename}")
+# async def get_top_classification_file(
+#     category: str,
+#     filename: str
+# ):
+#     """
+#     Download a specific classified .npy file from:
+#     working/categorized_top_npy/<category>/
+#     """
+
+#     if not filename.endswith(".npy"):
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Only .npy files are allowed."
+#         )
+
+#     target_file = (
+#         WORKING_DIR
+#         / "categorized_top_npy"
+#         / category
+#         / filename
+#     )
+
+#     if not target_file.exists():
+#         raise HTTPException(
+#             status_code=404,
+#             detail=f"File '{filename}' not found in category '{category}'."
+#         )
+
+#     return FileResponse(
+#         path=target_file,
+#         filename=filename,
+#         media_type="application/octet-stream"
+#     )
+
+
+# @app.get("/result/classification/side/{category}/{filename}")
+# async def get_side_classification_file(
+#     category: str,
+#     filename: str
+# ):
+#     """
+#     Download a specific classified .npy file from:
+#     working/categorized_side_npy/<category>/<filename>
+#     """
+
+#     if not filename.endswith(".npy"):
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Only .npy files are allowed."
+#         )
+
+#     target_file = (
+#         WORKING_DIR
+#         / "categorized_side_npy"
+#         / category
+#         / filename
+#     )
+
+#     if not target_file.exists():
+#         raise HTTPException(
+#             status_code=404,
+#             detail=f"File '{filename}' not found in category '{category}'."
+#         )
+
+#     return FileResponse(
+#         path=target_file,
+#         filename=filename,
+#         media_type="application/octet-stream"
+#     )

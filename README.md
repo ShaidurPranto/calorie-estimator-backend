@@ -322,31 +322,6 @@ curl "http://localhost:8000/result/segmentation/side"
 
 ---
 
-### `GET /result/segmentation/top/{filename}`
-
-Downloads a specific `.npy` segmentation mask file for the **top view** as a raw binary file.
-
-**Request**
-
-| Path param | Type | Description |
-|------------|------|-------------|
-| `filename` | string | Must end in `.npy`, e.g. `mask_0.npy` |
-
-```bash
-curl -O "http://localhost:8000/result/segmentation/top/mask_0.npy"
-```
-
-**Response** `200 OK` — binary file (`application/octet-stream`)
-
-**Error responses**
-
-| Status | Condition | Body |
-|--------|-----------|------|
-| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
-| `404 Not Found` | File doesn't exist at `working/segmentation-outputs/masks/top/<filename>` | `{"detail": "File '<filename>' not found."}` |
-
----
-
 ### `GET /result/segmentation/top/content/{filename}`
 
 Loads a specific `.npy` segmentation mask file for the **top view** and returns its contents inline as JSON, instead of as a binary download. The array is read with `numpy.load(..., allow_pickle=False)` and converted to a nested Python list via `.tolist()`.
@@ -381,31 +356,6 @@ curl "http://localhost:8000/result/segmentation/top/content/mask_0.npy"
 | `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
 | `404 Not Found` | File doesn't exist at `working/segmentation-outputs/masks/top/<filename>` | `{"detail": "File '<filename>' not found."}` |
 | `500 Internal Server Error` | The file exists but couldn't be loaded/parsed as a numpy array | `{"detail": "Error reading or parsing the segmentation file: <error message>"}` |
-
----
-
-### `GET /result/segmentation/side/{filename}`
-
-Downloads a specific `.npy` segmentation mask file for the **side view** as a raw binary file.
-
-**Request**
-
-| Path param | Type | Description |
-|------------|------|-------------|
-| `filename` | string | Must end in `.npy`, e.g. `mask_0.npy` |
-
-```bash
-curl -O "http://localhost:8000/result/segmentation/side/mask_0.npy"
-```
-
-**Response** `200 OK` — binary file (`application/octet-stream`)
-
-**Error responses**
-
-| Status | Condition | Body |
-|--------|-----------|------|
-| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
-| `404 Not Found` | File doesn't exist at `working/segmentation-outputs/masks/side/<filename>` | `{"detail": "File '<filename>' not found."}` |
 
 ---
 
@@ -512,32 +462,6 @@ curl "http://localhost:8000/result/classification/side"
 
 ---
 
-### `GET /result/classification/top/{category}/{filename}`
-
-Downloads a specific classified `.npy` file for the **top view** from a given category subfolder, as a raw binary file.
-
-**Request**
-
-| Path param | Type | Description |
-|------------|------|-------------|
-| `category` | string | Category subfolder name, e.g. `biriyani` (see [Supported foods](#supported-foods)) |
-| `filename` | string | Must end in `.npy`, e.g. `crop_0.npy` |
-
-```bash
-curl -O "http://localhost:8000/result/classification/top/biriyani/crop_0.npy"
-```
-
-**Response** `200 OK` — binary file (`application/octet-stream`)
-
-**Error responses**
-
-| Status | Condition | Body |
-|--------|-----------|------|
-| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
-| `404 Not Found` | File doesn't exist at `working/categorized_top_npy/<category>/<filename>` | `{"detail": "File '<filename>' not found in category '<category>'."}` |
-
----
-
 ### `GET /result/classification/top/content/{category}/{filename}`
 
 Loads a specific classified `.npy` file for the **top view** from a given category subfolder and returns its contents inline as JSON, instead of as a binary download.
@@ -574,32 +498,6 @@ curl "http://localhost:8000/result/classification/top/content/biriyani/crop_0.np
 | `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
 | `404 Not Found` | File doesn't exist at `working/categorized_top_npy/<category>/<filename>` | `{"detail": "File '<filename>' not found in category '<category>'."}` |
 | `500 Internal Server Error` | The file exists but couldn't be loaded/parsed as a numpy array | `{"detail": "Error reading the classification file: <error message>"}` |
-
----
-
-### `GET /result/classification/side/{category}/{filename}`
-
-Downloads a specific classified `.npy` file for the **side view** from a given category subfolder, as a raw binary file.
-
-**Request**
-
-| Path param | Type | Description |
-|------------|------|-------------|
-| `category` | string | Category subfolder name, e.g. `biriyani` |
-| `filename` | string | Must end in `.npy`, e.g. `crop_0.npy` |
-
-```bash
-curl -O "http://localhost:8000/result/classification/side/biriyani/crop_0.npy"
-```
-
-**Response** `200 OK` — binary file (`application/octet-stream`)
-
-**Error responses**
-
-| Status | Condition | Body |
-|--------|-----------|------|
-| `400 Bad Request` | `filename` doesn't end in `.npy` | `{"detail": "Only .npy files are allowed."}` |
-| `404 Not Found` | File doesn't exist at `working/categorized_side_npy/<category>/<filename>` | `{"detail": "File '<filename>' not found in category '<category>'."}` |
 
 ---
 
@@ -641,27 +539,3 @@ curl "http://localhost:8000/result/classification/side/content/biriyani/crop_0.n
 | `500 Internal Server Error` | The file exists but couldn't be loaded/parsed as a numpy array | `{"detail": "Error reading the classification file: <error message>"}` |
 
 ---
-
-## Typical usage flow
-
-```bash
-# 1. Upload the top-view photo
-curl -X POST "http://localhost:8000/upload/top" -F "file=@top.jpg"
-
-# 2. Upload the side-view photo
-curl -X POST "http://localhost:8000/upload/side" -F "file=@side.jpg"
-
-# 3. Run the full processing pipeline
-curl -X POST "http://localhost:8000/process"
-
-# 4. (Optional) Inspect intermediate segmentation / classification outputs
-curl "http://localhost:8000/result/segmentation/top"
-curl "http://localhost:8000/result/classification/top"
-
-# 4a. Download a raw .npy mask/crop as a binary file
-curl -O "http://localhost:8000/result/segmentation/top/mask_0.npy"
-
-# 4b. Or fetch the same array's contents directly as JSON (no download needed)
-curl "http://localhost:8000/result/segmentation/top/content/mask_0.npy"
-curl "http://localhost:8000/result/classification/top/content/biriyani/crop_0.npy"
-```
