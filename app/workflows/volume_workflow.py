@@ -10,6 +10,25 @@ import cv2
 from scipy.optimize import linear_sum_assignment
 from app.modules import volume_module as module
 
+def create_json_file(directory_path, file_name):
+    """Creates an empty .json file with the given name in the specified directory."""
+    # Ensure the file name ends with .json
+    if not file_name.endswith(".json"):
+        file_name += ".json"
+
+    # Combine the directory path and file name safely
+    file_path = os.path.join(directory_path, file_name)
+
+    # Optional: Create the directory if it doesn't exist yet
+    if not os.path.exists(directory_path):
+        os.makedirs(directory_path)
+
+    # Write an empty JSON object ({}) to the file
+    with open(file_path, "w", encoding="utf-8") as json_file:
+        json.dump({}, json_file)
+
+    print(f"Successfully created: {file_path}")
+    
 
 def find_image_with_keyword(folder: Path, keyword: str) -> str:
     exts = ('.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff', '.webp', '.gif')
@@ -194,5 +213,11 @@ def vol_main():
 
     print(f"\n✅ Saved merged classification volumes to: {output_json_path}")
     print(json.dumps(merged_volumes, indent=2))
+
+
+    # progresss tracking code block
+    progress_dir = os.path.join(OUTPUT_ROOT, "progress")
+    create_json_file(progress_dir, f"volume.json")
+    print(f"file created: volume.json")
 
     return all_results, merged_volumes

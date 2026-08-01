@@ -5,9 +5,9 @@
      Config
   ========================================================= */
   const CONFIG = {
-    INITIAL_DELAY_MS: 8000,     // wait after /process is fired before first segmentation check
-    POLL_INTERVAL_MS: 5000,     // gap between "not ready yet" retries
-    MAX_POLL_ATTEMPTS: 40,      // ~2.5 min ceiling per stage before giving up
+    INITIAL_DELAY_MS: 8000,     // wait after /process is fired before the first state check
+    POLL_INTERVAL_MS: 10000,    // gap kept between every state check, whether or not it moved things forward
+    MAX_POLL_ATTEMPTS: 70,      // ~2.5 min ceiling before giving up on the whole pipeline
   };
 
   const SEGMENT_COLORS = ['#3DD6C4', '#F2A93B', '#8E7CE0', '#E88AB0', '#6FBF6A', '#4FA3D1', '#E07A5F', '#B5CC5C'];
@@ -50,18 +50,9 @@
     return body;
   }
 
-  /** Poll fn() until it resolves without throwing, retrying on failure. */
-  async function pollUntilOk(fn, { intervalMs, maxAttempts, onRetry }) {
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        return await fn();
-      } catch (e) {
-        if (attempt >= maxAttempts) throw e;
-        if (onRetry) onRetry(attempt, e);
-        await sleep(intervalMs);
-      }
-    }
-  }
+  /** sleep() above is still used directly by the sequential pipeline below;
+   *  no generic retry-poller is needed anymore since /result/state is
+   *  checked in one single loop instead of per-stage. */
 
   /* =========================================================
      Logging + toast
@@ -95,8 +86,9 @@
   const stageTracker = {
     upload:   { started: 0, done: 0, target: 1 },
     process:  { started: 0, done: 0, target: 1 },
-    segment:  { started: 0, done: 0, target: 2 },
-    classify: { started: 0, done: 0, target: 2 },
+    segment:  { started: 0, done: 0, target: 1 },
+    classify: { started: 0, done: 0, target: 1 },
+    volume:   { started: 0, done: 0, target: 1 },
     report:   { started: 0, done: 0, target: 1 },
   };
   function setStageVisual(name, state) {
@@ -218,11 +210,18 @@
   }
 
   /* =========================================================
-     Kick-off: once both images are uploaded, fire three
-     independent, concurrent processes:
-       1) POST /process           (the slow final report)
-       2) top segmentation/classification poll + redraw loop
-       3) side segmentation/classification poll + redraw loop
+     Kick-off: once both images are uploaded, fire /process, then
+     drive one single sequential pipeline off of /result/state:
+
+       segmentation top   -> fetch + draw top masks
+       segmentation side  -> fetch + draw side masks
+       classification top -> label the already-fetched top masks
+       classification side-> label the already-fetched side masks
+       volume             -> fetch the final report
+
+     Each step only starts once the previous one has been handled, and a
+     fixed gap (CONFIG.POLL_INTERVAL_MS) is kept between every check of
+     /result/state, whether or not that check moved things forward.
   ========================================================= */
   let pipelineKicked = false;
   function maybeStartPipeline() {
@@ -234,61 +233,117 @@
 
     bumpStage('upload', 'start');
     bumpStage('upload', 'done');
-    log('Both angles uploaded \u2014 starting pipeline (process + top scan + side scan, in parallel).');
+    log('Both angles uploaded \u2014 starting pipeline.');
 
-    runProcessPipeline();     // not awaited: runs independently
-    runViewPipeline('top');   // not awaited: runs independently
-    runViewPipeline('side');  // not awaited: runs independently
+    runPipeline();
   }
 
-  /* =========================================================
-     Process pipeline: the slow, single source of truth report
-  ========================================================= */
-  async function runProcessPipeline() {
+  async function runPipeline() {
     bumpStage('process', 'start');
     try {
-      const res = await fetchJSON(`${apiBase()}/process`, { method: 'POST' });
+      const queued = await fetchJSON(`${apiBase()}/process`, { method: 'POST' });
       bumpStage('process', 'done');
-      bumpStage('report', 'start');
-      renderReport(res.data);
-      bumpStage('report', 'done');
-      log('Nutrition report ready.', 'success');
+      log(queued.message || 'Processing started on the server.', 'success');
     } catch (e) {
       log(`/process failed: ${e.message}`, 'error');
-      showToast(`Processing failed: ${e.message}`);
+      showToast(`Processing failed to start: ${e.message}`);
+      return;
     }
+
+    log(`Waiting ${(CONFIG.INITIAL_DELAY_MS / 1000).toFixed(0)}s before checking pipeline state\u2026`);
+    await sleep(CONFIG.INITIAL_DELAY_MS);
+
+    // Tracks which stage-transitions we've already reacted to, so each one
+    // fires exactly once, in order, as /result/state reports it complete.
+    const seen = {
+      segmentation_top: false,
+      segmentation_side: false,
+      classification_top: false,
+      classification_side: false,
+      volume: false,
+    };
+
+    setSweeping('top', true);
+    bumpStage('segment', 'start');
+
+    for (let attempt = 1; attempt <= CONFIG.MAX_POLL_ATTEMPTS; attempt++) {
+      let state;
+      try {
+        state = await fetchJSON(`${apiBase()}/result/state`);
+      } catch (e) {
+        log(`State check failed (attempt ${attempt}): ${e.message}`, 'warn');
+        await sleep(CONFIG.POLL_INTERVAL_MS);
+        continue;
+      }
+
+      const stages = state.stages || {};
+      let acted = false;
+
+      if (!seen.segmentation_top && stages.segmentation_top) {
+        seen.segmentation_top = true;
+        acted = true;
+        await handleSegmentationDone('top');
+        setSweeping('side', true);
+
+      } else if (seen.segmentation_top && !seen.segmentation_side && stages.segmentation_side) {
+        seen.segmentation_side = true;
+        acted = true;
+        await handleSegmentationDone('side');
+        bumpStage('segment', 'done');
+        bumpStage('classify', 'start');
+
+      } else if (seen.segmentation_side && !seen.classification_top && stages.classification_top) {
+        seen.classification_top = true;
+        acted = true;
+        await handleClassificationDone('top');
+
+      } else if (seen.classification_top && !seen.classification_side && stages.classification_side) {
+        seen.classification_side = true;
+        acted = true;
+        await handleClassificationDone('side');
+        bumpStage('classify', 'done');
+        bumpStage('volume', 'start');
+
+      } else if (seen.classification_side && !seen.volume && stages.volume) {
+        seen.volume = true;
+        acted = true;
+        await handleVolumeDone();
+        bumpStage('volume', 'done');
+        return; // pipeline fully complete
+      }
+
+      if (!acted) {
+        const doneList = state.completed_stages && state.completed_stages.length
+          ? state.completed_stages.join(', ')
+          : 'none yet';
+        log(`Waiting on pipeline \u2014 completed so far: ${doneList} (attempt ${attempt})`, 'warn');
+      }
+
+      await sleep(CONFIG.POLL_INTERVAL_MS);
+    }
+
+    log('Timed out waiting for the pipeline to finish.', 'error');
+    showToast('Timed out waiting for processing to finish.');
   }
 
   /* =========================================================
-     Per-view scan pipeline
+     Stage handlers
   ========================================================= */
-  async function runViewPipeline(view) {
+
+  /** Segmentation for one view has completed: fetch the mask list, then
+   *  fetch + draw each mask's content as it arrives. Masks start unlabeled;
+   *  classification (once it completes) decides which of them get a label. */
+  async function handleSegmentationDone(view) {
     const v = views[view];
     try {
-      log(`[${view}] waiting ${(CONFIG.INITIAL_DELAY_MS / 1000).toFixed(0)}s before checking for segmentation output\u2026`);
-      await sleep(CONFIG.INITIAL_DELAY_MS);
-
-      // ---- Stage: segmentation ----
       setStatus(view, 'Segmenting\u2026', 'active');
-      setSweeping(view, true);
-      bumpStage('segment', 'start');
+      log(`[${view}] segmentation complete \u2014 fetching masks\u2026`, 'success');
 
-      const segList = await pollUntilOk(
-        () => fetchJSON(`${apiBase()}/result/segmentation/${view}`),
-        {
-          intervalMs: CONFIG.POLL_INTERVAL_MS,
-          maxAttempts: CONFIG.MAX_POLL_ATTEMPTS,
-          onRetry: (attempt) => log(`[${view}] segmentation not ready yet (attempt ${attempt}) \u2014 retrying\u2026`, 'warn'),
-        }
-      );
-
+      const segList = await fetchJSON(`${apiBase()}/result/segmentation/${view}`);
       const filenames = segList.files || [];
-      log(`[${view}] segmentation complete \u2014 ${filenames.length} region(s) found.`, 'success');
+      log(`[${view}] ${filenames.length} region(s) found.`, 'success');
       setStatus(view, `${filenames.length} region(s) found \u2014 loading masks\u2026`, 'active');
 
-      // Fetch every mask's contents concurrently, but paint each one onto
-      // the image the instant IT arrives rather than waiting for the whole
-      // batch — this is step 1, and it happens incrementally.
       let loadedCount = 0;
       await Promise.all(filenames.map(async (filename, i) => {
         const res = await fetchJSON(`${apiBase()}/result/segmentation/${view}/content/${encodeURIComponent(filename)}`);
@@ -306,68 +361,73 @@
         setStatus(view, `Masking region ${loadedCount}/${filenames.length}\u2026`, 'active');
       }));
 
-      bumpStage('segment', 'done');
-      setStatus(view, `${filenames.length} region(s) masked \u2014 classifying\u2026`, 'active');
-
-      // ---- Stage: classification ----
-      bumpStage('classify', 'start');
-      const clsList = await pollUntilOk(
-        () => fetchJSON(`${apiBase()}/result/classification/${view}`),
-        {
-          intervalMs: CONFIG.POLL_INTERVAL_MS,
-          maxAttempts: CONFIG.MAX_POLL_ATTEMPTS,
-          onRetry: (attempt) => log(`[${view}] classification not ready yet (attempt ${attempt}) \u2014 retrying\u2026`, 'warn'),
-        }
-      );
       setSweeping(view, false);
-
-      const categories = clsList.categories || {};
-      const catEntries = Object.entries(categories);
-      const foodCount = catEntries.reduce((n, [, files]) => n + (files ? files.length : 0), 0);
-
-      // The classification listing is authoritative for what's actually
-      // food. Rather than guess whether its filenames line up with the
-      // segmentation filenames we already drew, fetch each classified
-      // mask directly by category (the API gives us a dedicated endpoint
-      // for exactly this) and use THAT as the new, complete mask set.
-      // Anything not present here — i.e. not food — is simply left out,
-      // which removes it from the image.
-      v.masks = {};
-      drawMasks(view);   // clear the provisional segmentation-only masks
-      renderLegend(view);
-
-      let placedCount = 0;
-      await Promise.all(catEntries.flatMap(([category, files]) =>
-        (files || []).map(async (filename) => {
-          const res = await fetchJSON(
-            `${apiBase()}/result/classification/${view}/content/${encodeURIComponent(category)}/${encodeURIComponent(filename)}`
-          );
-          const key = `${category}/${filename}`;
-          v.masks[key] = {
-            filename: key,
-            data: res.mask,
-            color: getCategoryColor(category),   // same food category -> same color, shared across views/report
-            visible: true,
-            label: category,
-            centroidFrac: computeCentroidFrac(res.mask),
-          };
-          placedCount++;
-          drawMasks(view);
-          renderLegend(view);
-          setStatus(view, `Labeling food ${placedCount}/${foodCount}\u2026`, 'active');
-        })
-      ));
-
-      bumpStage('classify', 'done');
-      log(`[${view}] classification complete \u2014 ${foodCount} food region(s) across ${catEntries.length} item(s) kept; non-food regions removed.`, 'success');
-
-      const itemCount = catEntries.length;
-      setStatus(view, `${itemCount} food item(s) identified`, 'done');
+      setStatus(view, `${filenames.length} region(s) masked \u2014 waiting on classification\u2026`, 'active');
     } catch (e) {
       setSweeping(view, false);
       setStatus(view, `Failed: ${e.message}`, 'error');
-      log(`[${view}] pipeline failed: ${e.message}`, 'error');
-      showToast(`${view} scan failed: ${e.message}`);
+      log(`[${view}] segmentation step failed: ${e.message}`, 'error');
+      showToast(`${view} segmentation failed: ${e.message}`);
+    }
+  }
+
+  /** Classification for one view has completed. We already have every mask
+   *  for this view in memory from segmentation — this step only fetches the
+   *  category listing and uses it to decide which already-fetched filename
+   *  belongs to which category. No mask content is re-fetched here. Masks
+   *  that don't appear in any category stay visible, just without a label. */
+  async function handleClassificationDone(view) {
+    const v = views[view];
+    try {
+      setStatus(view, 'Classifying\u2026', 'active');
+      log(`[${view}] classification complete \u2014 applying labels\u2026`, 'success');
+
+      const clsList = await fetchJSON(`${apiBase()}/result/classification/${view}`);
+      const categories = clsList.categories || {};
+
+      // filename -> category, built purely from the listing response
+      const labelByFilename = {};
+      Object.entries(categories).forEach(([category, files]) => {
+        (files || []).forEach((filename) => { labelByFilename[filename] = category; });
+      });
+
+      let labeledCount = 0;
+      const totalCount = Object.keys(v.masks).length;
+      Object.values(v.masks).forEach((m) => {
+        const category = labelByFilename[m.filename];
+        if (category) {
+          m.label = category;
+          m.color = getCategoryColor(category); // same food category -> same color, shared across views/report
+          labeledCount++;
+        } else {
+          m.label = null; // stays visible on the image, just carries no label
+        }
+      });
+
+      drawMasks(view);
+      renderLegend(view);
+
+      log(`[${view}] classification applied \u2014 ${labeledCount}/${totalCount} region(s) labeled, ${totalCount - labeledCount} left unlabeled.`, 'success');
+      setStatus(view, `${labeledCount} food item(s) identified`, 'done');
+    } catch (e) {
+      setStatus(view, `Failed: ${e.message}`, 'error');
+      log(`[${view}] classification step failed: ${e.message}`, 'error');
+      showToast(`${view} classification failed: ${e.message}`);
+    }
+  }
+
+  /** Volume estimation (the last stage) has completed: fetch and render
+   *  the final nutrition report. */
+  async function handleVolumeDone() {
+    bumpStage('report', 'start');
+    try {
+      const res = await fetchJSON(`${apiBase()}/volume-estimation`);
+      renderReport(res.data);
+      bumpStage('report', 'done');
+      log('Nutrition report ready.', 'success');
+    } catch (e) {
+      log(`Fetching the final report failed: ${e.message}`, 'error');
+      showToast(`Fetching the final report failed: ${e.message}`);
     }
   }
 
