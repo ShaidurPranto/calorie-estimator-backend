@@ -29,6 +29,10 @@
   ========================================================= */
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  function basename(path) {
+    return String(path).split(/[\\/]/).pop();
+  }
+
   function hexToRgb(hex) {
     const m = hex.replace('#', '');
     return [parseInt(m.slice(0, 2), 16), parseInt(m.slice(2, 4), 16), parseInt(m.slice(4, 6), 16)];
@@ -279,32 +283,42 @@
       const stages = state.stages || {};
       let acted = false;
 
+      // These used to be an if/else-if chain, which meant only ONE newly
+      // -ready stage got handled per poll cycle even if the backend had
+      // already raced ahead and finished several stages while we were
+      // asleep. Each block is still gated on the previous stage's "seen"
+      // flag (so order is preserved), but they're now independent ifs so
+      // a single poll can walk through every stage that's already ready.
       if (!seen.segmentation_top && stages.segmentation_top) {
         seen.segmentation_top = true;
         acted = true;
         await handleSegmentationDone('top');
         setSweeping('side', true);
+      }
 
-      } else if (seen.segmentation_top && !seen.segmentation_side && stages.segmentation_side) {
+      if (seen.segmentation_top && !seen.segmentation_side && stages.segmentation_side) {
         seen.segmentation_side = true;
         acted = true;
         await handleSegmentationDone('side');
         bumpStage('segment', 'done');
         bumpStage('classify', 'start');
+      }
 
-      } else if (seen.segmentation_side && !seen.classification_top && stages.classification_top) {
+      if (seen.segmentation_side && !seen.classification_top && stages.classification_top) {
         seen.classification_top = true;
         acted = true;
         await handleClassificationDone('top');
+      }
 
-      } else if (seen.classification_top && !seen.classification_side && stages.classification_side) {
+      if (seen.classification_top && !seen.classification_side && stages.classification_side) {
         seen.classification_side = true;
         acted = true;
         await handleClassificationDone('side');
         bumpStage('classify', 'done');
         bumpStage('volume', 'start');
+      }
 
-      } else if (seen.classification_side && !seen.volume && stages.volume) {
+      if (seen.classification_side && !seen.volume && stages.volume) {
         seen.volume = true;
         acted = true;
         await handleVolumeDone();
@@ -385,29 +399,82 @@
       const clsList = await fetchJSON(`${apiBase()}/result/classification/${view}`);
       const categories = clsList.categories || {};
 
-      // filename -> category, built purely from the listing response
-      const labelByFilename = {};
+      // filename -> category, built purely from the listing response.
+      // We index every category filename under a few different keys so a
+      // mask matches regardless of small formatting differences between
+      // what segmentation handed us and what classification hands back:
+      //   - the raw filename as given
+      //   - its basename (in case classification includes a subfolder path)
+      //   - a "normalized" form: lowercase, extension stripped, any
+      //     non-alphanumeric run collapsed to a single underscore
+      //   - the numeric id pulled out of the filename (handles zero-padding
+      //     or prefix differences like "segment_4" vs "top_segment_004")
+      function normalize(name) {
+        return basename(name).toLowerCase().replace(/\.npy$/, '').replace(/[^a-z0-9]+/g, '_');
+      }
+      function numericId(name) {
+        const m = basename(name).match(/(\d+)(?!.*\d)/); // last digit run
+        return m ? String(parseInt(m[1], 10)) : null;
+      }
+
+      const byExact = {}, byBasename = {}, byNormalized = {}, byNumericId = {};
       Object.entries(categories).forEach(([category, files]) => {
-        (files || []).forEach((filename) => { labelByFilename[filename] = category; });
+        (files || []).forEach((filename) => {
+          byExact[filename] = category;
+          byBasename[basename(filename)] = category;
+          byNormalized[normalize(filename)] = category;
+          const id = numericId(filename);
+          if (id !== null) {
+            // Don't let an ambiguous numeric id silently overwrite a
+            // different category — only keep it if it's unambiguous.
+            byNumericId[id] = (id in byNumericId && byNumericId[id] !== category) ? '__AMBIGUOUS__' : category;
+          }
+        });
       });
 
+      function resolveCategory(filename) {
+        if (byExact[filename]) return byExact[filename];
+        if (byBasename[basename(filename)]) return byBasename[basename(filename)];
+        if (byNormalized[normalize(filename)]) return byNormalized[normalize(filename)];
+        const id = numericId(filename);
+        if (id !== null && byNumericId[id] && byNumericId[id] !== '__AMBIGUOUS__') return byNumericId[id];
+        return null;
+      }
+
       let labeledCount = 0;
+      let removedCount = 0;
       const totalCount = Object.keys(v.masks).length;
       Object.values(v.masks).forEach((m) => {
-        const category = labelByFilename[m.filename];
+        const category = resolveCategory(m.filename);
         if (category) {
           m.label = category;
           m.color = getCategoryColor(category); // same food category -> same color, shared across views/report
+          m.visible = true;
           labeledCount++;
         } else {
-          m.label = null; // stays visible on the image, just carries no label
+          // Not under any predicted category — drop it from the display
+          // entirely rather than leaving an unlabeled mask behind.
+          m.label = null;
+          m.visible = false;
+          removedCount++;
         }
       });
+
+      // Nothing matched at all even though the server reported categories
+      // -> almost certainly a filename-format mismatch between the
+      // segmentation and classification endpoints. Surface the raw values
+      // so it's diagnosable from the activity log instead of failing silently.
+      const categoryFileCount = Object.values(categories).reduce((n, files) => n + (files ? files.length : 0), 0);
+      if (labeledCount === 0 && categoryFileCount > 0 && totalCount > 0) {
+        const oursSample = Object.keys(v.masks).slice(0, 5).join(', ');
+        const theirsSample = Object.values(categories).flat().slice(0, 5).join(', ');
+        log(`[${view}] 0 matches despite ${categoryFileCount} categorized file(s) \u2014 filename mismatch? segmentation gave: [${oursSample}] vs classification gave: [${theirsSample}]`, 'error');
+      }
 
       drawMasks(view);
       renderLegend(view);
 
-      log(`[${view}] classification applied \u2014 ${labeledCount}/${totalCount} region(s) labeled, ${totalCount - labeledCount} left unlabeled.`, 'success');
+      log(`[${view}] classification applied \u2014 ${labeledCount}/${totalCount} region(s) labeled, ${removedCount} unclassified region(s) removed.`, 'success');
       setStatus(view, `${labeledCount} food item(s) identified`, 'done');
     } catch (e) {
       setStatus(view, `Failed: ${e.message}`, 'error');
@@ -486,11 +553,10 @@
   }
 
   function drawLabel(ctx, text, x, y, color) {
-    // ctx.font = "600 13px 'IBM Plex Mono', monospace";
-    ctx.font = "600 33px 'IBM Plex Mono', monospace";    
+    ctx.font = "600 13px 'IBM Plex Mono', monospace";
     const padX = 9, padY = 6;
     const w = ctx.measureText(text).width + padX * 2;
-    const h = 22;
+    const h = 13 + padY * 2;
     ctx.fillStyle = 'rgba(15,17,20,0.82)';
     roundRect(ctx, x - w / 2, y - h / 2, w, h, h / 2);
     ctx.fill();
