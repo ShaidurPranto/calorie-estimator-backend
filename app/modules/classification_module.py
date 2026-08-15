@@ -18,10 +18,9 @@ class FoodClassifier:
         """
         Initialize the FoodClassifier.
         """
-        self.model_path = BASE_DIR / "models" / "classifier" / "v2" / "model_1_vit_segment_aware.pth"
-        self.labels_path = BASE_DIR / "models" / "classifier" / "v2" / "labels.txt"
-        # self.num_classes = 19  # this is for v1
-        self.num_classes = 7   # this is for v2
+        self.model_path = BASE_DIR / "models" / "classifier" / "v3" / "model_1_vit_segment_aware_v3.pth"
+        self.labels_path = BASE_DIR / "models" / "classifier" / "v3" / "labels_v3.txt"
+        self.num_classes = 10
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Load labels
