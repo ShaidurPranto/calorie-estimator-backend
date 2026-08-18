@@ -553,17 +553,17 @@
   }
 
   function drawLabel(ctx, text, x, y, color) {
-    ctx.font = "600 13px 'IBM Plex Mono', monospace";
+    ctx.font = "600 25px 'IBM Plex Mono', monospace";
     const padX = 9, padY = 6;
     const w = ctx.measureText(text).width + padX * 2;
     const h = 13 + padY * 2;
-    ctx.fillStyle = 'rgba(15,17,20,0.82)';
+    ctx.fillStyle = 'rgba(239, 242, 246, 0.82)';
     roundRect(ctx, x - w / 2, y - h / 2, w, h, h / 2);
     ctx.fill();
     ctx.lineWidth = 1;
     ctx.strokeStyle = color;
     ctx.stroke();
-    ctx.fillStyle = '#EDEDEE';
+    ctx.fillStyle = '#040404ff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, x, y + 0.5);
