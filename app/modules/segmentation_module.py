@@ -39,8 +39,11 @@ class SegmentationModule:
         self.device       = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
         # SAM2 mask-generator parameters
-        self.points_per_side        = 64
-        self.points_per_batch       = 32
+        # self.points_per_side        = 64
+        # self.points_per_batch       = 32
+        self.points_per_side        = 32
+        self.points_per_batch       = 8
+          
         self.pred_iou_thresh        = 0.8
         self.stability_score_thresh = 0.92
         self.box_nms_thresh         = 0.6
