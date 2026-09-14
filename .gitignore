@@ -11,4 +11,4 @@
 /app/build/
 
 # local Python environment
-/.venv/
+/calorie-estimator-venv/

@@ -6,9 +6,11 @@ readonly REPO_URL="https://github.com/ShaidurPranto/calorie-estimator-backend.gi
 readonly CLASSIFIER_URL="https://www.kaggle.com/api/v1/datasets/download/ifty3110/food-classifier-models-v2-seg"
 readonly SEGMENTATION_URL="https://www.kaggle.com/api/v1/datasets/download/ifty3110/segmentation-module-checkpoints-config"
 readonly THUMB_URL="https://www.kaggle.com/api/v1/datasets/download/intesartahmidalam/finger-detector-and-calibration-files"
+readonly VENV_NAME="calorie-estimator-venv"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR=""
+VENV_DIR=""
 TEMP_DIR=""
 
 cleanup() {
@@ -121,6 +123,30 @@ install_thumb_models() {
     cp -a "$calibration_source_dir/." "$target_dir/calibration/"
 }
 
+classifier_models_ready() {
+    local target_dir="$REPO_DIR/app/models/classifier/v2-seg"
+
+    [[ -f "$target_dir/model_1_vit_segment_aware_v2_seg.pth" && \
+        -f "$target_dir/labels_v2_seg.txt" ]]
+}
+
+segmentation_models_ready() {
+    local target_dir="$REPO_DIR/app/models/segmentation"
+
+    [[ -f "$target_dir/checkpoints/sam2_hiera_large.pt" && \
+        -f "$target_dir/configs/sam2/sam2_hiera_l.yaml" && \
+        -f "$target_dir/sam2/build_sam.py" && \
+        -f "$target_dir/sam2/automatic_mask_generator.py" ]]
+}
+
+thumb_models_ready() {
+    local target_dir="$REPO_DIR/app/models/thumb"
+
+    [[ -f "$target_dir/calibration/finger_detector.joblib" && \
+        -f "$target_dir/calibration/calibration.py" && \
+        -f "$target_dir/calibration/modeling.py" ]]
+}
+
 validate_installation() {
     local app_dir="$REPO_DIR/app"
 
@@ -135,7 +161,7 @@ validate_installation() {
     printf 'Checking Python imports...\n'
     (
         cd "$REPO_DIR"
-        PYTHONPATH="$app_dir" "$REPO_DIR/.venv/bin/python" -c \
+        PYTHONPATH="$app_dir" "$VENV_DIR/bin/python" -c \
             'import app.main; from app.modules.classification_module import FoodClassifier; from app.modules.segmentation_module import SegmentationModule; from app.modules.thumb_module import FingerDetectorAndCalibrator'
     )
 }
@@ -147,30 +173,45 @@ main() {
     require_command python3
 
     prepare_repository
+    VENV_DIR="$REPO_DIR/$VENV_NAME"
     TEMP_DIR="$(mktemp -d)"
 
-    if [[ ! -x "$REPO_DIR/.venv/bin/python" ]]; then
-        printf 'Creating virtual environment...\n'
-        python3 -m venv "$REPO_DIR/.venv" || \
+    if [[ ! -x "$VENV_DIR/bin/python" ]]; then
+        printf 'Creating virtual environment: %s\n' "$VENV_NAME"
+        python3 -m venv "$VENV_DIR" || \
             fail "Could not create a virtual environment. Install python3-venv and run the script again."
     fi
 
     printf 'Installing Python requirements...\n'
-    "$REPO_DIR/.venv/bin/python" -m pip install --upgrade pip
-    "$REPO_DIR/.venv/bin/python" -m pip install -r "$REPO_DIR/app/requirements.txt"
+    "$VENV_DIR/bin/python" -m pip install --upgrade pip
+    "$VENV_DIR/bin/python" -m pip install -r "$REPO_DIR/app/requirements.txt"
 
-    download_and_extract "classifier" "$CLASSIFIER_URL"
-    download_and_extract "segmentation" "$SEGMENTATION_URL"
-    download_and_extract "thumb" "$THUMB_URL"
+    if classifier_models_ready; then
+        printf 'Classifier model is already installed; skipping download.\n'
+    else
+        download_and_extract "classifier" "$CLASSIFIER_URL"
+        install_classifier_models
+    fi
 
-    install_classifier_models
-    install_segmentation_models
-    install_thumb_models
+    if segmentation_models_ready; then
+        printf 'Segmentation model is already installed; skipping download.\n'
+    else
+        download_and_extract "segmentation" "$SEGMENTATION_URL"
+        install_segmentation_models
+    fi
+
+    if thumb_models_ready; then
+        printf 'Thumb detection model is already installed; skipping download.\n'
+    else
+        download_and_extract "thumb" "$THUMB_URL"
+        install_thumb_models
+    fi
+
     validate_installation
 
     cd "$REPO_DIR"
     printf 'Setup complete. Starting the API at http://localhost:8000\n'
-    exec "$REPO_DIR/.venv/bin/python" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+    exec "$VENV_DIR/bin/python" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
 }
 
 main "$@"

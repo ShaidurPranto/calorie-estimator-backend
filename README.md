@@ -73,6 +73,14 @@ A minimal `ui/index.html` is included purely to exercise the API endpoints manua
 ---
 
 ## Getting started
+### Automatic Setup
+Run the setup script to setup everything automatically. This will create a virtual environment, install dependencies, required models from kaggle, and run the server.
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
 
 ### Requirements
 - Python 3.9+
