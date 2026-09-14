@@ -18,8 +18,8 @@ class FoodClassifier:
         """
         Initialize the FoodClassifier.
         """
-        self.model_path = BASE_DIR / "models" / "classifier" / "v2" / "model_1_vit_segment_aware.pth"
-        self.labels_path = BASE_DIR / "models" / "classifier" / "v2" / "labels.txt"
+        self.model_path = BASE_DIR / "models" / "classifier" / "v2-seg" / "model_1_vit_segment_aware_v2_seg.pth"
+        self.labels_path = BASE_DIR / "models" / "classifier" / "v2-seg" / "labels_v2_seg.txt"
         self.num_classes = 7
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -72,7 +72,7 @@ class FoodClassifier:
 
         # Create model architecture
         model = timm.create_model(
-            "vit_base_patch16_224_in21k", # this is for v2
+            "vit_base_patch16_224_in21k", # this is for v2-seg
             # "vit_small_patch16_224", # this is for v1
             pretrained=False,
             num_classes=self.num_classes

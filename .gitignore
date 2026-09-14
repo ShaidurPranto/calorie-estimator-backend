@@ -9,3 +9,6 @@
 
 # ignore build
 /app/build/
+
+# local Python environment
+/.venv/

@@ -1,0 +1,26 @@
+1. clone the repo 
+https://github.com/ShaidurPranto/calorie-estimator-backend.git
+
+2. download classifier model, unzip it(if required) and place the files inside calorie-estimator-backend/app/models/classifier/v2-seg/
+#!/bin/bash
+curl -L -o ~/Downloads/food-classifier-models-v2-seg.zip\
+  https://www.kaggle.com/api/v1/datasets/download/ifty3110/food-classifier-models-v2-seg
+
+3. download segmentation model, unzip it(if required) and place the files inside calorie-estimator-backend/app/models/segmentation/ 
+#!/bin/bash
+curl -L -o ~/Downloads/segmentation-module-checkpoints-config.zip\
+  https://www.kaggle.com/api/v1/datasets/download/ifty3110/segmentation-module-checkpoints-config
+
+4. download thumb detection and calibration model, unzip it(if required) and place the files inside calorie-estimator-backend/app/models/thumb/
+#!/bin/bash
+curl -L -o ~/Downloads/finger-detector-and-calibration-files.zip\
+  https://www.kaggle.com/api/v1/datasets/download/intesartahmidalam/finger-detector-and-calibration-files
+
+5. cd calorie-estimator-backend
+6. cd app
+7. create a virtual environment(i managed the environment on my laptop using miniconda, so i dont know if miniconda is required or not. if needed then miniconda is also needed to be installed and virutal environment should be created using conda)
+8. install required libraries listed in requirements.txt
+9. cd ..
+10. to start the server
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+ 
