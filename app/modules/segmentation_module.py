@@ -115,36 +115,36 @@ class SegmentationModule:
             raise TypeError("Input must be a file path (str) or a PIL.Image object")
 
     ## this is v1
-    # def _generate_masks(self, image_rgb):
-    #     """Run SAM2 and apply area-based filtering + deduplication."""
-    #     masks = self.mask_generator.generate(image_rgb)
-    #     masks = self._deduplicate_masks(masks)
-    #     if masks:
-    #         max_area = max(m["area"] for m in masks)
-    #         masks = [m for m in masks if m["area"] >= self.min_area_ratio * max_area]
-    #     return masks
-    ## 
-
-
-    ## this is v2
     def _generate_masks(self, image_rgb):
+        """Run SAM2 and apply area-based filtering + deduplication."""
         masks = self.mask_generator.generate(image_rgb)
         masks = self._deduplicate_masks(masks)
         if masks:
             max_area = max(m["area"] for m in masks)
             masks = [m for m in masks if m["area"] >= self.min_area_ratio * max_area]
+        return masks
+    ## 
 
-        # NEW — reject scattered/fragmented masks
-        good = []
-        for m in masks:
-            seg = m["segmentation"]
-            ys, xs = np.where(seg)
-            if len(ys) == 0:
-                continue
-            bbox_area = (xs.max() - xs.min() + 1) * (ys.max() - ys.min() + 1)
-            if seg.sum() / bbox_area >= 0.30:
-                good.append(m)
-        return good
+
+    ## this is v2
+    # def _generate_masks(self, image_rgb):
+    #     masks = self.mask_generator.generate(image_rgb)
+    #     masks = self._deduplicate_masks(masks)
+    #     if masks:
+    #         max_area = max(m["area"] for m in masks)
+    #         masks = [m for m in masks if m["area"] >= self.min_area_ratio * max_area]
+
+    #     # NEW — reject scattered/fragmented masks
+    #     good = []
+    #     for m in masks:
+    #         seg = m["segmentation"]
+    #         ys, xs = np.where(seg)
+    #         if len(ys) == 0:
+    #             continue
+    #         bbox_area = (xs.max() - xs.min() + 1) * (ys.max() - ys.min() + 1)
+    #         if seg.sum() / bbox_area >= 0.30:
+    #             good.append(m)
+    #     return good
     ## 
 
     def _deduplicate_masks(self, masks):
@@ -304,3 +304,95 @@ class SegmentationModule:
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         print(f"GPU memory after clear: {torch.cuda.memory_allocated()/1e9:.2f}GB allocated")
+
+
+    def display_segments(self, input_image_path, segments_dir, seg_cols=3):
+        """
+        Display an input image alongside all its saved segment PNGs in a grid.
+
+        Args:
+            input_image_path (str): Path to the original input image.
+            segments_dir     (str): Path to the folder containing segment PNGs
+                                    for this image (e.g. .../segments/image_name/).
+            seg_cols         (int): Number of columns in the segments grid.
+        """
+        valid_ext = {'.jpg', '.jpeg', '.png', '.bmp', '.webp'}
+        input_path = Path(input_image_path)
+
+        seg_paths = sorted([
+            p for p in Path(segments_dir).iterdir()
+            if p.is_file() and p.suffix.lower() in valid_ext
+        ])
+
+        if not seg_paths:
+            print(f"⚠️  No segments found in '{segments_dir}'")
+            return
+
+        seg_rows   = math.ceil(len(seg_paths) / seg_cols)
+        total_rows = 1 + seg_rows
+
+        fig = plt.figure(
+            figsize=(seg_cols * 4, 4 + seg_rows * 3.5),
+            facecolor='white'
+        )
+        plt.suptitle(
+            f"Segmentation results for  '{input_path.stem}'",
+            fontsize=11, fontweight='bold', y=1.01
+        )
+
+        # Row 0: input image (full width)
+        ax_input = plt.subplot2grid((total_rows, seg_cols), (0, 0), colspan=seg_cols)
+        inp_disp, inp_cmap = self._read_disp(str(input_path))
+        if inp_disp is not None:
+            ax_input.imshow(inp_disp, cmap=inp_cmap)
+        self._style_ax(ax_input, f"INPUT  —  {input_path.name}")
+
+        # Rows 1..N: segments
+        for idx, seg_path in enumerate(seg_paths):
+            row = 1 + idx // seg_cols
+            col = idx  % seg_cols
+            ax  = plt.subplot2grid((total_rows, seg_cols), (row, col))
+            disp, cmap = self._read_disp(seg_path)
+            if disp is not None:
+                ax.imshow(disp, cmap=cmap)
+            self._style_ax(ax, seg_path.name)
+
+        # Hide leftover empty axes
+        remainder = len(seg_paths) % seg_cols
+        if remainder:
+            for empty_col in range(remainder, seg_cols):
+                ax_empty = plt.subplot2grid(
+                    (total_rows, seg_cols), (total_rows - 1, empty_col)
+                )
+                ax_empty.set_visible(False)
+
+        plt.tight_layout()
+        plt.show()
+        print(f"✔ '{input_path.stem}' — {len(seg_paths)} segments shown\n")
+
+
+    def display_all_segments(self, input_dir, segments_root_dir, seg_cols=3):
+        """
+        Display segmentation results for every image in input_dir.
+
+        Args:
+            input_dir         (str): Folder containing the original input images.
+            segments_root_dir (str): Root segments folder (contains one sub-folder
+                                     per image, named after the image stem).
+            seg_cols          (int): Number of columns in each segments grid.
+        """
+        valid_ext = {'.jpg', '.jpeg', '.png', '.bmp', '.webp'}
+
+        all_input_images = sorted([
+            p for p in Path(input_dir).iterdir()
+            if p.is_file() and p.suffix.lower() in valid_ext
+        ])
+
+        for input_path in all_input_images:
+            segments_subdir = os.path.join(segments_root_dir, input_path.stem)
+
+            if not os.path.isdir(segments_subdir):
+                print(f"⚠️  Skipping '{input_path.stem}' — no segments folder found.")
+                continue
+
+            self.display_segments(str(input_path), segments_subdir, seg_cols=seg_cols)

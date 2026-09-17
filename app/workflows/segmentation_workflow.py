@@ -176,5 +176,5 @@ def seg_main():
     # =============================
     # DISPLAY RESULTS
     # =============================
-    if hasattr(seg, "display_all_segments"):
-        seg.display_all_segments(INPUT_DIR, segments_dir)
+    # if hasattr(seg, "display_all_segments"):
+        # seg.display_all_segments(INPUT_DIR, segments_dir)

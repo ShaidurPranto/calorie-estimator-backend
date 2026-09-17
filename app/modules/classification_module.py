@@ -121,7 +121,7 @@ class FoodClassifier:
         }
 
     ## this is v2
-    def crop_to_content(pil_image_rgba):
+    def crop_to_content(self, pil_image_rgba):
         """
         Given an RGBA image, crop tightly to the non-transparent region.
         Returns an RGB image with white background.
