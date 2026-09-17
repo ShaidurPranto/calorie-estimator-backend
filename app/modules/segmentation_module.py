@@ -114,14 +114,38 @@ class SegmentationModule:
         else:
             raise TypeError("Input must be a file path (str) or a PIL.Image object")
 
+    ## this is v1
+    # def _generate_masks(self, image_rgb):
+    #     """Run SAM2 and apply area-based filtering + deduplication."""
+    #     masks = self.mask_generator.generate(image_rgb)
+    #     masks = self._deduplicate_masks(masks)
+    #     if masks:
+    #         max_area = max(m["area"] for m in masks)
+    #         masks = [m for m in masks if m["area"] >= self.min_area_ratio * max_area]
+    #     return masks
+    ## 
+
+
+    ## this is v2
     def _generate_masks(self, image_rgb):
-        """Run SAM2 and apply area-based filtering + deduplication."""
         masks = self.mask_generator.generate(image_rgb)
         masks = self._deduplicate_masks(masks)
         if masks:
             max_area = max(m["area"] for m in masks)
             masks = [m for m in masks if m["area"] >= self.min_area_ratio * max_area]
-        return masks
+
+        # NEW — reject scattered/fragmented masks
+        good = []
+        for m in masks:
+            seg = m["segmentation"]
+            ys, xs = np.where(seg)
+            if len(ys) == 0:
+                continue
+            bbox_area = (xs.max() - xs.min() + 1) * (ys.max() - ys.min() + 1)
+            if seg.sum() / bbox_area >= 0.30:
+                good.append(m)
+        return good
+    ## 
 
     def _deduplicate_masks(self, masks):
         """Remove heavily overlapping masks, keeping the larger one."""
@@ -263,7 +287,20 @@ class SegmentationModule:
         return results
 
     def clear_cache(self):
-        """Release cached image and masks, and free GPU memory."""
+        """Release cached image, masks, and free GPU memory aggressively."""
         self._cached_image_rgb = None
-        self._cached_masks     = None
+        self._cached_masks = None
+        
+        # Clear SAM2's internal image encoder state if it exists
+        if hasattr(self.mask_generator, 'predictor'):
+            predictor = self.mask_generator.predictor
+            if hasattr(predictor, '_features'):
+                predictor._features = None
+            if hasattr(predictor, '_orig_hw'):
+                predictor._orig_hw = None
+        
+        import gc
+        gc.collect()
         torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+        print(f"GPU memory after clear: {torch.cuda.memory_allocated()/1e9:.2f}GB allocated")

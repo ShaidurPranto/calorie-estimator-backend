@@ -53,7 +53,7 @@ def seg_main():
     MODEL_CONFIG = "configs/sam2/sam2_hiera_l.yaml"
     DEVICE       = "cuda" if torch.cuda.is_available() else "cpu"
 
-    SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png")
+    SUPPORTED_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".webp", ".heic")
 
     coords_dir   = os.path.join(OUTPUT_DIR, "coordinates")
     masks_dir    = os.path.join(OUTPUT_DIR, "masks")

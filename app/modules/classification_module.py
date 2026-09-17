@@ -120,43 +120,96 @@ class FoodClassifier:
             'confidence': confidence
         }
 
+    ## this is v2
+    def crop_to_content(pil_image_rgba):
+        """
+        Given an RGBA image, crop tightly to the non-transparent region.
+        Returns an RGB image with white background.
+        """
+        import numpy as np
+
+        arr   = np.array(pil_image_rgba.convert("RGBA"))
+        alpha = arr[:, :, 3]
+
+        rows  = np.any(alpha > 10, axis=1)
+        cols  = np.any(alpha > 10, axis=0)
+
+        if not rows.any():
+            # fully transparent — return as-is on white bg
+            bg = Image.new("RGB", pil_image_rgba.size, (255, 255, 255))
+            bg.paste(pil_image_rgba, mask=pil_image_rgba.split()[3])
+            return bg
+
+        y1, y2 = np.where(rows)[0][[0, -1]]
+        x1, x2 = np.where(cols)[0][[0, -1]]
+
+        cropped = pil_image_rgba.crop((x1, y1, x2 + 1, y2 + 1))
+
+        bg = Image.new("RGB", cropped.size, (255, 255, 255))
+        bg.paste(cropped, mask=cropped.split()[3])
+        return bg
+
+
     def classify_by_path(self, image_path):
-        """
-        Classify a food image from file path.
-
-        Args:
-            image_path (str): Path to the image file
-
-        Returns:
-            dict: Dictionary containing:
-                  - 'class_index': Predicted class index
-                  - 'class_name': Predicted class name
-                  - 'confidence': Confidence score (softmax probability)
-                  - 'image_path': Original image path
-        """
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image file not found at {image_path}")
 
-        # Open image
         try:
             image = Image.open(image_path)
 
             if image.mode in ("RGBA", "P"):
                 image = image.convert("RGBA")
-                # Create a white background to paste transparent pixels over
-                background = Image.new("RGB", image.size, (255, 255, 255)) 
-                background.paste(image, mask=image.split()[3]) # 3 is the alpha channel
-                img = background
+                img = self.crop_to_content(image)   # ← replaces the old white-bg block
             else:
                 img = image.convert("RGB")
+
         except Exception as e:
             raise ValueError(f"Failed to open image: {e}")
 
-        # Classify using image
         result = self.classify_by_image(img)
         result['image_path'] = image_path
-
         return result
+    ## 
+
+    ## this is v1
+    # def classify_by_path(self, image_path):
+    #     """
+    #     Classify a food image from file path.
+
+    #     Args:
+    #         image_path (str): Path to the image file
+
+    #     Returns:
+    #         dict: Dictionary containing:
+    #               - 'class_index': Predicted class index
+    #               - 'class_name': Predicted class name
+    #               - 'confidence': Confidence score (softmax probability)
+    #               - 'image_path': Original image path
+    #     """
+    #     if not os.path.exists(image_path):
+    #         raise FileNotFoundError(f"Image file not found at {image_path}")
+
+    #     # Open image
+    #     try:
+    #         image = Image.open(image_path)
+
+    #         if image.mode in ("RGBA", "P"):
+    #             image = image.convert("RGBA")
+    #             # Create a white background to paste transparent pixels over
+    #             background = Image.new("RGB", image.size, (255, 255, 255)) 
+    #             background.paste(image, mask=image.split()[3]) # 3 is the alpha channel
+    #             img = background
+    #         else:
+    #             img = image.convert("RGB")
+    #     except Exception as e:
+    #         raise ValueError(f"Failed to open image: {e}")
+
+    #     # Classify using image
+    #     result = self.classify_by_image(img)
+    #     result['image_path'] = image_path
+
+    #     return result
+    ##
 
     def classify_and_display_subfolders(self, root_folder_path: str):
         """
@@ -170,7 +223,7 @@ class FoodClassifier:
             
         import matplotlib.pyplot as plt
         
-        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp')
+        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp', '.heic')
         
         subfolders = [f for f in os.listdir(root_folder_path) 
                       if os.path.isdir(os.path.join(root_folder_path, f))]
@@ -215,7 +268,7 @@ class FoodClassifier:
             
         import matplotlib.pyplot as plt
         
-        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp')
+        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp', '.heic')
         
         print(f"\n--- Processing folder: {folder_path} ---")
         
@@ -260,7 +313,7 @@ class FoodClassifier:
 
         os.makedirs(output_dir, exist_ok=True)
 
-        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp')
+        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp', '.heic')
         image_files = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
         image_files = sorted(image_files)
 
@@ -353,7 +406,7 @@ class FoodClassifier:
 
         os.makedirs(output_dir, exist_ok=True)
 
-        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp')
+        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.webp', '.heic')
         image_files = [f for f in os.listdir(folder_path) if f.lower().endswith(valid_extensions)]
         image_files = sorted(image_files)
 
@@ -366,13 +419,23 @@ class FoodClassifier:
             try:
                 image = Image.open(img_path)
 
+                ## this is v1
+                # if image.mode in ("RGBA", "P"):
+                #     image = image.convert("RGBA")
+                #     background = Image.new("RGB", image.size, (255, 255, 255))
+                #     background.paste(image, mask=image.split()[3])
+                #     img = background
+                # else:
+                #     img = image.convert("RGB")
+                ##
+
+                ## this is v2
                 if image.mode in ("RGBA", "P"):
                     image = image.convert("RGBA")
-                    background = Image.new("RGB", image.size, (255, 255, 255))
-                    background.paste(image, mask=image.split()[3])
-                    img = background
+                    img = self.crop_to_content(image)
                 else:
                     img = image.convert("RGB")
+                ##
 
                 result = self._classify_image_with_allowed_labels(img, allowed_labels)
                 if result is None or result['confidence'] < threshold:

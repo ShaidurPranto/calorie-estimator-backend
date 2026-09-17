@@ -131,33 +131,157 @@ def clean_working_directory_all():
             print(f"Failed to delete {item}. Reason: {e}")
 
 
+def analyze_food_volume2(input_json_path, output_json_path="food_nutrition_report.json"):
+
+    KCAL_PER_G = {"carbohydrates": 4, "protein": 4, "fat": 9, "fiber": 2}
+
+    # Nutrition values are per GRAM of food (matches USDA per-100g values / 100).
+    nutrition_kb = {
+        "apple":         {"carbohydrates":0.138,"fiber":0.024,"protein":0.003,"fat":0.002,"sodium_mg":0.01,"calcium_mg":0.06,"iron_mg":0.0012,"vit_a_ug":0.03,"vit_c_mg":0.046,"vit_d_ug":0.0},
+        "banana":        {"carbohydrates":0.228,"fiber":0.026,"protein":0.011,"fat":0.003,"sodium_mg":0.01,"calcium_mg":0.05,"iron_mg":0.0026,"vit_a_ug":0.03,"vit_c_mg":0.087,"vit_d_ug":0.0},
+        "grape":         {"carbohydrates":0.181,"fiber":0.009,"protein":0.0072,"fat":0.0016,"sodium_mg":0.02,"calcium_mg":0.10,"iron_mg":0.0036,"vit_a_ug":0.03,"vit_c_mg":0.032,"vit_d_ug":0.0},
+        "mango":         {"carbohydrates":0.150,"fiber":0.016,"protein":0.0082,"fat":0.0038,"sodium_mg":0.01,"calcium_mg":0.11,"iron_mg":0.0016,"vit_a_ug":0.54,"vit_c_mg":0.364,"vit_d_ug":0.0},
+        "orange":        {"carbohydrates":0.1175,"fiber":0.024,"protein":0.0094,"fat":0.0012,"sodium_mg":0.00,"calcium_mg":0.40,"iron_mg":0.0010,"vit_a_ug":0.11,"vit_c_mg":0.532,"vit_d_ug":0.0},
+        "pine_apple":    {"carbohydrates":0.131,"fiber":0.014,"protein":0.0054,"fat":0.0012,"sodium_mg":0.01,"calcium_mg":0.13,"iron_mg":0.0029,"vit_a_ug":0.03,"vit_c_mg":0.478,"vit_d_ug":0.0},
+        "watermelon":    {"carbohydrates":0.0755,"fiber":0.004,"protein":0.0061,"fat":0.0015,"sodium_mg":0.01,"calcium_mg":0.07,"iron_mg":0.0024,"vit_a_ug":0.28,"vit_c_mg":0.081,"vit_d_ug":0.0},
+    }
+
+    # Approximate bulk density of the *edible flesh* in g/cm3.
+    # Fresh fruit is mostly water (~1.0 g/cm3) but air pockets / cell structure
+    # pull most whole fruits below that. These are reasonable literature/estimate
+    # values, not lab-measured — tune them if you have better data for your use case.
+    density_g_per_cm3 = {
+        "apple":       0.85,
+        "banana":      0.95,
+        "grape":       1.05,
+        "mango":       0.99,
+        "orange":      0.87,
+        "pine_apple":  0.95,
+        "watermelon":  0.93,
+    }
+
+    def bar(val, total, width=20):
+        filled = int((val / total) * width) if total else 0
+        return "█" * filled + "░" * (width - filled)
+
+    MACRO_MAX = {"carbs": 275, "protein": 50, "fat": 78, "fiber": 28}
+
+    if not os.path.exists(input_json_path):
+        print(f"Error: '{input_json_path}' does not exist.")
+        return
+
+    with open(input_json_path, 'r') as f:
+        try:
+            input_data = json.load(f)
+        except json.JSONDecodeError:
+            print("Error: Invalid JSON format.")
+            return
+
+    report = {}
+    meal_totals = {k: 0.0 for k in ["calories_kcal","carbohydrates_g","fiber_g","protein_g","fat_g","sodium_mg","calcium_mg","iron_mg","vit_a_ug","vit_c_mg","vit_d_ug"]}
+
+    print("\n" + "═" * 58)
+    print(f"{'🍽  DIET NUTRITION REPORT':^58}")
+    print("═" * 58)
+
+    for food_name, volume in input_data.items():
+        key = food_name.strip().lower()
+        if key not in nutrition_kb:
+            print(f"\n⚠  '{food_name}' not recognized — skipping.")
+            continue
+
+        d = nutrition_kb[key]
+        density = density_g_per_cm3.get(key, 1.0)   # fallback to 1.0 if a food has no density entry
+        weight_g = round(volume * density, 2)         # <-- volume -> weight conversion happens here
+
+        carbs   = round(d["carbohydrates"] * weight_g, 2)
+        fiber   = round(d["fiber"] * weight_g, 2)
+        protein = round(d["protein"] * weight_g, 2)
+        fat     = round(d["fat"] * weight_g, 2)
+        sodium  = round(d["sodium_mg"] * weight_g, 1)
+        calcium = round(d["calcium_mg"] * weight_g, 1)
+        iron    = round(d["iron_mg"] * weight_g, 2)
+        vit_a   = round(d["vit_a_ug"] * weight_g, 1)
+        vit_c   = round(d["vit_c_mg"] * weight_g, 1)
+        vit_d   = round(d["vit_d_ug"] * weight_g, 2)
+
+        calories = round(
+            carbs * KCAL_PER_G["carbohydrates"] +
+            protein * KCAL_PER_G["protein"] +
+            fat * KCAL_PER_G["fat"] +
+            fiber * KCAL_PER_G["fiber"], 1
+        )
+
+        total_macro_g = carbs + protein + fat + fiber
+        c_pct = round(carbs / total_macro_g * 100) if total_macro_g else 0
+        p_pct = round(protein / total_macro_g * 100) if total_macro_g else 0
+        f_pct = round(fat / total_macro_g * 100) if total_macro_g else 0
+
+        for k, v in [("calories_kcal",calories),("carbohydrates_g",carbs),("fiber_g",fiber),
+                     ("protein_g",protein),("fat_g",fat),("sodium_mg",sodium),
+                     ("calcium_mg",calcium),("iron_mg",iron),("vit_a_ug",vit_a),
+                     ("vit_c_mg",vit_c),("vit_d_ug",vit_d)]:
+            meal_totals[k] = round(meal_totals[k] + v, 2)
+
+        report[food_name] = {
+            "volume_cm3": volume,
+            "density_g_per_cm3": density,
+            "weight_g": weight_g,
+            "calories_kcal": calories,
+            "macros": {"carbohydrates_g":carbs,"fiber_g":fiber,"protein_g":protein,"fat_g":fat},
+            "macro_split_%": {"carbs":c_pct,"protein":p_pct,"fat":f_pct},
+            "minerals": {"sodium_mg":sodium,"calcium_mg":calcium,"iron_mg":iron},
+            "vitamins": {"vit_a_ug":vit_a,"vit_c_mg":vit_c,"vit_d_ug":vit_d},
+        }
+
+        print(f"\n┌─ {food_name.upper().replace('_',' ')} ({'%.0f' % volume} cm³ → {weight_g}g @ {density} g/cm³)")
+        print(f"│  🔥 Calories   : {calories} kcal")
+        print(f"│")
+        print(f"│  MACROS")
+        print(f"│  🌾 Carbs      : {carbs}g ")
+        print(f"│  🥩 Protein    : {protein}g ")
+        print(f"│  🫙 Fat        : {fat}g ")
+        print(f"│  🌿 Fiber      : {fiber}g ")
+        print(f"│")
+        print(f"│  MINERALS & VITAMINS")
+        print(f"│  🧂 Sodium     : {sodium}mg   💪 Calcium: {calcium}mg   🩸 Iron: {iron}mg")
+        print(f"│  🥕 Vit A      : {vit_a}µg    🍋 Vit C : {vit_c}mg    ☀  Vit D: {vit_d}µg")
+        print(f"└{'─'*55}")
+
+    # ── MEAL SUMMARY ───────────────────────────────────────────────────────────
+    print(f"\n{'═'*58}")
+    print(f"{'📋  TOTAL MEAL SUMMARY':^58}")
+    print(f"{'═'*58}")
+    print(f"  🔥 Total Calories  : {meal_totals['calories_kcal']} kcal")
+    print(f"  🌾 Total Carbs     : {meal_totals['carbohydrates_g']}g")
+    print(f"  🥩 Total Protein   : {meal_totals['protein_g']}g")
+    print(f"  🫙 Total Fat       : {meal_totals['fat_g']}g")
+    print(f"  🌿 Total Fiber     : {meal_totals['fiber_g']}g")
+    print(f"  🧂 Total Sodium    : {meal_totals['sodium_mg']}mg")
+    print(f"  💪 Total Calcium   : {meal_totals['calcium_mg']}mg")
+    print(f"  🩸 Total Iron      : {meal_totals['iron_mg']}mg")
+    print(f"  🥕 Total Vit A     : {meal_totals['vit_a_ug']}µg")
+    print(f"  🍋 Total Vit C     : {meal_totals['vit_c_mg']}mg")
+    print(f"  ☀  Total Vit D     : {meal_totals['vit_d_ug']}µg")
+    print(f"{'═'*58}\n")
+
+    final_output = {
+        "per_food_breakdown": report,
+        "meal_totals": meal_totals,
+    }
+
+    with open(output_json_path, 'w') as out:
+        json.dump(final_output, out, indent=2)
+
+    print(f"[✓] Report saved → {output_json_path}\n")
+
+
 
 def analyze_food_volume(input_json_path, output_json_path="food_nutrition_report.json"):
 
     KCAL_PER_G = {"carbohydrates": 4, "protein": 4, "fat": 9, "fiber": 2}
 
     nutrition_kb = {
-        "hilsha_fish":   {"carbohydrates":0.00,"fiber":0.00,"protein":0.22,"fat":0.19,"sodium_mg":0.55,"calcium_mg":0.18,"iron_mg":0.014,"vit_a_ug":0.6,"vit_c_mg":0.0,"vit_d_ug":0.8},
-        "biriyani":      {"carbohydrates":0.32,"fiber":0.015,"protein":0.09,"fat":0.14,"sodium_mg":0.50,"calcium_mg":0.04,"iron_mg":0.008,"vit_a_ug":0.5,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "khichuri":      {"carbohydrates":0.22,"fiber":0.025,"protein":0.05,"fat":0.04,"sodium_mg":0.30,"calcium_mg":0.03,"iron_mg":0.010,"vit_a_ug":0.3,"vit_c_mg":0.1,"vit_d_ug":0.0},
-        "morog_polao":   {"carbohydrates":0.28,"fiber":0.012,"protein":0.11,"fat":0.13,"sodium_mg":0.45,"calcium_mg":0.03,"iron_mg":0.007,"vit_a_ug":0.4,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "yogurt":        {"carbohydrates":0.05,"fiber":0.00,"protein":0.04,"fat":0.04,"sodium_mg":0.17,"calcium_mg":0.12,"iron_mg":0.001,"vit_a_ug":0.5,"vit_c_mg":0.5,"vit_d_ug":0.1},
-        "roshgolla":     {"carbohydrates":0.38,"fiber":0.00,"protein":0.04,"fat":0.02,"sodium_mg":0.10,"calcium_mg":0.07,"iron_mg":0.002,"vit_a_ug":0.1,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "porota":        {"carbohydrates":0.35,"fiber":0.02,"protein":0.06,"fat":0.12,"sodium_mg":0.40,"calcium_mg":0.02,"iron_mg":0.006,"vit_a_ug":0.0,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "bakorkhani":    {"carbohydrates":0.45,"fiber":0.025,"protein":0.08,"fat":0.18,"sodium_mg":0.55,"calcium_mg":0.03,"iron_mg":0.007,"vit_a_ug":0.0,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "fuchka":        {"carbohydrates":0.20,"fiber":0.03,"protein":0.04,"fat":0.06,"sodium_mg":0.60,"calcium_mg":0.02,"iron_mg":0.012,"vit_a_ug":0.1,"vit_c_mg":1.5,"vit_d_ug":0.0},
-        "roshmalai":     {"carbohydrates":0.42,"fiber":0.00,"protein":0.06,"fat":0.08,"sodium_mg":0.12,"calcium_mg":0.10,"iron_mg":0.002,"vit_a_ug":0.3,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "kacha_golla":   {"carbohydrates":0.40,"fiber":0.00,"protein":0.08,"fat":0.07,"sodium_mg":0.08,"calcium_mg":0.09,"iron_mg":0.002,"vit_a_ug":0.2,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "kala_bhuna":    {"carbohydrates":0.04,"fiber":0.005,"protein":0.24,"fat":0.22,"sodium_mg":0.80,"calcium_mg":0.02,"iron_mg":0.025,"vit_a_ug":0.2,"vit_c_mg":0.5,"vit_d_ug":0.0},
-        "haleem":        {"carbohydrates":0.16,"fiber":0.035,"protein":0.09,"fat":0.07,"sodium_mg":0.55,"calcium_mg":0.04,"iron_mg":0.018,"vit_a_ug":0.1,"vit_c_mg":0.3,"vit_d_ug":0.0},
-        "mashed_potato": {"carbohydrates":0.15,"fiber":0.02,"protein":0.02,"fat":0.03,"sodium_mg":0.25,"calcium_mg":0.01,"iron_mg":0.004,"vit_a_ug":0.0,"vit_c_mg":3.0,"vit_d_ug":0.0},
-        "nehari":        {"carbohydrates":0.02,"fiber":0.00,"protein":0.12,"fat":0.15,"sodium_mg":0.70,"calcium_mg":0.04,"iron_mg":0.020,"vit_a_ug":0.1,"vit_c_mg":0.0,"vit_d_ug":0.0},
-        "kabab":         {"carbohydrates":0.05,"fiber":0.01,"protein":0.20,"fat":0.14,"sodium_mg":0.60,"calcium_mg":0.02,"iron_mg":0.022,"vit_a_ug":0.1,"vit_c_mg":0.2,"vit_d_ug":0.0},
-        "egg_omlete":    {"carbohydrates":0.01,"fiber":0.00,"protein":0.11,"fat":0.12,"sodium_mg":0.55,"calcium_mg":0.05,"iron_mg":0.015,"vit_a_ug":1.5,"vit_c_mg":0.0,"vit_d_ug":0.9},
-        "beguni":        {"carbohydrates":0.18,"fiber":0.02,"protein":0.03,"fat":0.16,"sodium_mg":0.30,"calcium_mg":0.01,"iron_mg":0.005,"vit_a_ug":0.0,"vit_c_mg":0.8,"vit_d_ug":0.0},
-        "chickpeas":     {"carbohydrates":0.24,"fiber":0.07,"protein":0.08,"fat":0.05,"sodium_mg":0.15,"calcium_mg":0.05,"iron_mg":0.025,"vit_a_ug":0.1,"vit_c_mg":0.5,"vit_d_ug":0.0},
-
-        # ── Fruits (per-gram values derived from USDA raw-fruit data, per 100g / 100) ──
         "apple":         {"carbohydrates":0.138,"fiber":0.024,"protein":0.003,"fat":0.002,"sodium_mg":0.01,"calcium_mg":0.06,"iron_mg":0.0012,"vit_a_ug":0.03,"vit_c_mg":0.046,"vit_d_ug":0.0},
         "banana":        {"carbohydrates":0.228,"fiber":0.026,"protein":0.011,"fat":0.003,"sodium_mg":0.01,"calcium_mg":0.05,"iron_mg":0.0026,"vit_a_ug":0.03,"vit_c_mg":0.087,"vit_d_ug":0.0},
         "grape":         {"carbohydrates":0.181,"fiber":0.009,"protein":0.0072,"fat":0.0016,"sodium_mg":0.02,"calcium_mg":0.10,"iron_mg":0.0036,"vit_a_ug":0.03,"vit_c_mg":0.032,"vit_d_ug":0.0},
@@ -276,6 +400,151 @@ def analyze_food_volume(input_json_path, output_json_path="food_nutrition_report
         json.dump(final_output, out, indent=2)
 
     print(f"[✓] Report saved → {output_json_path}\n")
+
+# def analyze_food_volume(input_json_path, output_json_path="food_nutrition_report.json"):
+
+#     KCAL_PER_G = {"carbohydrates": 4, "protein": 4, "fat": 9, "fiber": 2}
+
+#     nutrition_kb = {
+#         "hilsha_fish":   {"carbohydrates":0.00,"fiber":0.00,"protein":0.22,"fat":0.19,"sodium_mg":0.55,"calcium_mg":0.18,"iron_mg":0.014,"vit_a_ug":0.6,"vit_c_mg":0.0,"vit_d_ug":0.8},
+#         "biriyani":      {"carbohydrates":0.32,"fiber":0.015,"protein":0.09,"fat":0.14,"sodium_mg":0.50,"calcium_mg":0.04,"iron_mg":0.008,"vit_a_ug":0.5,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "khichuri":      {"carbohydrates":0.22,"fiber":0.025,"protein":0.05,"fat":0.04,"sodium_mg":0.30,"calcium_mg":0.03,"iron_mg":0.010,"vit_a_ug":0.3,"vit_c_mg":0.1,"vit_d_ug":0.0},
+#         "morog_polao":   {"carbohydrates":0.28,"fiber":0.012,"protein":0.11,"fat":0.13,"sodium_mg":0.45,"calcium_mg":0.03,"iron_mg":0.007,"vit_a_ug":0.4,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "yogurt":        {"carbohydrates":0.05,"fiber":0.00,"protein":0.04,"fat":0.04,"sodium_mg":0.17,"calcium_mg":0.12,"iron_mg":0.001,"vit_a_ug":0.5,"vit_c_mg":0.5,"vit_d_ug":0.1},
+#         "roshgolla":     {"carbohydrates":0.38,"fiber":0.00,"protein":0.04,"fat":0.02,"sodium_mg":0.10,"calcium_mg":0.07,"iron_mg":0.002,"vit_a_ug":0.1,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "porota":        {"carbohydrates":0.35,"fiber":0.02,"protein":0.06,"fat":0.12,"sodium_mg":0.40,"calcium_mg":0.02,"iron_mg":0.006,"vit_a_ug":0.0,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "bakorkhani":    {"carbohydrates":0.45,"fiber":0.025,"protein":0.08,"fat":0.18,"sodium_mg":0.55,"calcium_mg":0.03,"iron_mg":0.007,"vit_a_ug":0.0,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "fuchka":        {"carbohydrates":0.20,"fiber":0.03,"protein":0.04,"fat":0.06,"sodium_mg":0.60,"calcium_mg":0.02,"iron_mg":0.012,"vit_a_ug":0.1,"vit_c_mg":1.5,"vit_d_ug":0.0},
+#         "roshmalai":     {"carbohydrates":0.42,"fiber":0.00,"protein":0.06,"fat":0.08,"sodium_mg":0.12,"calcium_mg":0.10,"iron_mg":0.002,"vit_a_ug":0.3,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "kacha_golla":   {"carbohydrates":0.40,"fiber":0.00,"protein":0.08,"fat":0.07,"sodium_mg":0.08,"calcium_mg":0.09,"iron_mg":0.002,"vit_a_ug":0.2,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "kala_bhuna":    {"carbohydrates":0.04,"fiber":0.005,"protein":0.24,"fat":0.22,"sodium_mg":0.80,"calcium_mg":0.02,"iron_mg":0.025,"vit_a_ug":0.2,"vit_c_mg":0.5,"vit_d_ug":0.0},
+#         "haleem":        {"carbohydrates":0.16,"fiber":0.035,"protein":0.09,"fat":0.07,"sodium_mg":0.55,"calcium_mg":0.04,"iron_mg":0.018,"vit_a_ug":0.1,"vit_c_mg":0.3,"vit_d_ug":0.0},
+#         "mashed_potato": {"carbohydrates":0.15,"fiber":0.02,"protein":0.02,"fat":0.03,"sodium_mg":0.25,"calcium_mg":0.01,"iron_mg":0.004,"vit_a_ug":0.0,"vit_c_mg":3.0,"vit_d_ug":0.0},
+#         "nehari":        {"carbohydrates":0.02,"fiber":0.00,"protein":0.12,"fat":0.15,"sodium_mg":0.70,"calcium_mg":0.04,"iron_mg":0.020,"vit_a_ug":0.1,"vit_c_mg":0.0,"vit_d_ug":0.0},
+#         "kabab":         {"carbohydrates":0.05,"fiber":0.01,"protein":0.20,"fat":0.14,"sodium_mg":0.60,"calcium_mg":0.02,"iron_mg":0.022,"vit_a_ug":0.1,"vit_c_mg":0.2,"vit_d_ug":0.0},
+#         "egg_omlete":    {"carbohydrates":0.01,"fiber":0.00,"protein":0.11,"fat":0.12,"sodium_mg":0.55,"calcium_mg":0.05,"iron_mg":0.015,"vit_a_ug":1.5,"vit_c_mg":0.0,"vit_d_ug":0.9},
+#         "beguni":        {"carbohydrates":0.18,"fiber":0.02,"protein":0.03,"fat":0.16,"sodium_mg":0.30,"calcium_mg":0.01,"iron_mg":0.005,"vit_a_ug":0.0,"vit_c_mg":0.8,"vit_d_ug":0.0},
+#         "chickpeas":     {"carbohydrates":0.24,"fiber":0.07,"protein":0.08,"fat":0.05,"sodium_mg":0.15,"calcium_mg":0.05,"iron_mg":0.025,"vit_a_ug":0.1,"vit_c_mg":0.5,"vit_d_ug":0.0},
+
+#         # ── Fruits (per-gram values derived from USDA raw-fruit data, per 100g / 100) ──
+#         "apple":         {"carbohydrates":0.138,"fiber":0.024,"protein":0.003,"fat":0.002,"sodium_mg":0.01,"calcium_mg":0.06,"iron_mg":0.0012,"vit_a_ug":0.03,"vit_c_mg":0.046,"vit_d_ug":0.0},
+#         "banana":        {"carbohydrates":0.228,"fiber":0.026,"protein":0.011,"fat":0.003,"sodium_mg":0.01,"calcium_mg":0.05,"iron_mg":0.0026,"vit_a_ug":0.03,"vit_c_mg":0.087,"vit_d_ug":0.0},
+#         "grape":         {"carbohydrates":0.181,"fiber":0.009,"protein":0.0072,"fat":0.0016,"sodium_mg":0.02,"calcium_mg":0.10,"iron_mg":0.0036,"vit_a_ug":0.03,"vit_c_mg":0.032,"vit_d_ug":0.0},
+#         "mango":         {"carbohydrates":0.150,"fiber":0.016,"protein":0.0082,"fat":0.0038,"sodium_mg":0.01,"calcium_mg":0.11,"iron_mg":0.0016,"vit_a_ug":0.54,"vit_c_mg":0.364,"vit_d_ug":0.0},
+#         "orange":        {"carbohydrates":0.1175,"fiber":0.024,"protein":0.0094,"fat":0.0012,"sodium_mg":0.00,"calcium_mg":0.40,"iron_mg":0.0010,"vit_a_ug":0.11,"vit_c_mg":0.532,"vit_d_ug":0.0},
+#         "pine_apple":    {"carbohydrates":0.131,"fiber":0.014,"protein":0.0054,"fat":0.0012,"sodium_mg":0.01,"calcium_mg":0.13,"iron_mg":0.0029,"vit_a_ug":0.03,"vit_c_mg":0.478,"vit_d_ug":0.0},
+#         "watermelon":    {"carbohydrates":0.0755,"fiber":0.004,"protein":0.0061,"fat":0.0015,"sodium_mg":0.01,"calcium_mg":0.07,"iron_mg":0.0024,"vit_a_ug":0.28,"vit_c_mg":0.081,"vit_d_ug":0.0},
+#     }
+
+#     def bar(val, total, width=20):
+#         filled = int((val / total) * width) if total else 0
+#         return "█" * filled + "░" * (width - filled)
+
+#     MACRO_MAX = {"carbs": 275, "protein": 50, "fat": 78, "fiber": 28}
+
+#     if not os.path.exists(input_json_path):
+#         print(f"Error: '{input_json_path}' does not exist.")
+#         return
+
+#     with open(input_json_path, 'r') as f:
+#         try:
+#             input_data = json.load(f)
+#         except json.JSONDecodeError:
+#             print("Error: Invalid JSON format.")
+#             return
+
+#     report = {}
+#     meal_totals = {k: 0.0 for k in ["calories_kcal","carbohydrates_g","fiber_g","protein_g","fat_g","sodium_mg","calcium_mg","iron_mg","vit_a_ug","vit_c_mg","vit_d_ug"]}
+
+#     print("\n" + "═" * 58)
+#     print(f"{'🍽  DIET NUTRITION REPORT':^58}")
+#     print("═" * 58)
+
+#     for food_name, volume in input_data.items():
+#         key = food_name.strip().lower()
+#         if key not in nutrition_kb:
+#             print(f"\n⚠  '{food_name}' not recognized — skipping.")
+#             continue
+
+#         d = nutrition_kb[key]
+#         carbs   = round(d["carbohydrates"] * volume, 2)
+#         fiber   = round(d["fiber"] * volume, 2)
+#         protein = round(d["protein"] * volume, 2)
+#         fat     = round(d["fat"] * volume, 2)
+#         sodium  = round(d["sodium_mg"] * volume, 1)
+#         calcium = round(d["calcium_mg"] * volume, 1)
+#         iron    = round(d["iron_mg"] * volume, 2)
+#         vit_a   = round(d["vit_a_ug"] * volume, 1)
+#         vit_c   = round(d["vit_c_mg"] * volume, 1)
+#         vit_d   = round(d["vit_d_ug"] * volume, 2)
+
+#         calories = round(
+#             carbs * KCAL_PER_G["carbohydrates"] +
+#             protein * KCAL_PER_G["protein"] +
+#             fat * KCAL_PER_G["fat"] +
+#             fiber * KCAL_PER_G["fiber"], 1
+#         )
+
+#         total_macro_g = carbs + protein + fat + fiber
+#         c_pct = round(carbs / total_macro_g * 100) if total_macro_g else 0
+#         p_pct = round(protein / total_macro_g * 100) if total_macro_g else 0
+#         f_pct = round(fat / total_macro_g * 100) if total_macro_g else 0
+
+#         for k, v in [("calories_kcal",calories),("carbohydrates_g",carbs),("fiber_g",fiber),
+#                      ("protein_g",protein),("fat_g",fat),("sodium_mg",sodium),
+#                      ("calcium_mg",calcium),("iron_mg",iron),("vit_a_ug",vit_a),
+#                      ("vit_c_mg",vit_c),("vit_d_ug",vit_d)]:
+#             meal_totals[k] = round(meal_totals[k] + v, 2)
+
+#         report[food_name] = {
+#             "volume_cm3": volume,
+#             "calories_kcal": calories,
+#             "macros": {"carbohydrates_g":carbs,"fiber_g":fiber,"protein_g":protein,"fat_g":fat},
+#             "macro_split_%": {"carbs":c_pct,"protein":p_pct,"fat":f_pct},
+#             "minerals": {"sodium_mg":sodium,"calcium_mg":calcium,"iron_mg":iron},
+#             "vitamins": {"vit_a_ug":vit_a,"vit_c_mg":vit_c,"vit_d_ug":vit_d},
+#         }
+
+#         print(f"\n┌─ {food_name.upper().replace('_',' ')} ({'%.0f' % volume} cm³)")
+#         print(f"│  🔥 Calories   : {calories} kcal")
+#         print(f"│")
+#         print(f"│  MACROS")
+#         print(f"│  🌾 Carbs      : {carbs}g ")
+#         print(f"│  🥩 Protein    : {protein}g ")
+#         print(f"│  🫙 Fat        : {fat}g ")
+#         print(f"│  🌿 Fiber      : {fiber}g ")
+#         print(f"│")
+#         print(f"│  MINERALS & VITAMINS")
+#         print(f"│  🧂 Sodium     : {sodium}mg   💪 Calcium: {calcium}mg   🩸 Iron: {iron}mg")
+#         print(f"│  🥕 Vit A      : {vit_a}µg    🍋 Vit C : {vit_c}mg    ☀  Vit D: {vit_d}µg")
+#         print(f"└{'─'*55}")
+
+#     # ── MEAL SUMMARY ───────────────────────────────────────────────────────────
+#     print(f"\n{'═'*58}")
+#     print(f"{'📋  TOTAL MEAL SUMMARY':^58}")
+#     print(f"{'═'*58}")
+#     print(f"  🔥 Total Calories  : {meal_totals['calories_kcal']} kcal")
+#     print(f"  🌾 Total Carbs     : {meal_totals['carbohydrates_g']}g")
+#     print(f"  🥩 Total Protein   : {meal_totals['protein_g']}g")
+#     print(f"  🫙 Total Fat       : {meal_totals['fat_g']}g")
+#     print(f"  🌿 Total Fiber     : {meal_totals['fiber_g']}g")
+#     print(f"  🧂 Total Sodium    : {meal_totals['sodium_mg']}mg")
+#     print(f"  💪 Total Calcium   : {meal_totals['calcium_mg']}mg")
+#     print(f"  🩸 Total Iron      : {meal_totals['iron_mg']}mg")
+#     print(f"  🥕 Total Vit A     : {meal_totals['vit_a_ug']}µg")
+#     print(f"  🍋 Total Vit C     : {meal_totals['vit_c_mg']}mg")
+#     print(f"  ☀  Total Vit D     : {meal_totals['vit_d_ug']}µg")
+#     print(f"{'═'*58}\n")
+
+#     final_output = {
+#         "per_food_breakdown": report,
+#         "meal_totals": meal_totals,
+#     }
+
+#     with open(output_json_path, 'w') as out:
+#         json.dump(final_output, out, indent=2)
+
+#     print(f"[✓] Report saved → {output_json_path}\n")
 
 def display_food_views(folder_path):
     valid_extensions = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']

@@ -31,7 +31,7 @@ def create_json_file(directory_path, file_name):
     
 
 def find_image_with_keyword(folder: Path, keyword: str) -> str:
-    exts = ('.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff', '.webp', '.gif')
+    exts = ('.jpg', '.jpeg', '.png', '.bmp', '.tif', '.tiff', '.webp', '.gif', '.heic')
     candidates = [f for f in os.listdir(folder)
                   if keyword.lower() in f.lower() and f.lower().endswith(exts)]
     if not candidates:
