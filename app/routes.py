@@ -13,6 +13,7 @@ from app.helpers import (
     _save_upload_file,
     clean_working_directory,
     analyze_food_volume,
+    analyze_food_volume2,
     display_food_views,
     get_npy_files,
     get_subfolders_with_npy,
@@ -95,7 +96,7 @@ def _run_pipeline_background():
     vol_main()
 
     final_output_path = WORKING_DIR / "final_nutrition_output.json"
-    analyze_food_volume(WORKING_DIR / "food_volumes_summary.json", final_output_path)
+    analyze_food_volume2(WORKING_DIR / "food_volumes_summary.json", final_output_path)
 
 
 ################################
