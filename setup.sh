@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 readonly REPO_URL="https://github.com/ShaidurPranto/calorie-estimator-backend.git"
-readonly CLASSIFIER_URL="https://www.kaggle.com/api/v1/datasets/download/ifty3110/food-classifier-models-v2-seg"
+readonly CLASSIFIER_URL="https://www.kaggle.com/api/v1/datasets/download/ifty3110/food-classifier-models-v4-seg-cropped"
 readonly SEGMENTATION_URL="https://www.kaggle.com/api/v1/datasets/download/ifty3110/segmentation-module-checkpoints-config"
 readonly THUMB_URL="https://www.kaggle.com/api/v1/datasets/download/intesartahmidalam/finger-detector-and-calibration-files"
 readonly VENV_NAME="calorie-estimator-venv"
@@ -75,12 +75,12 @@ prepare_repository() {
 
 install_classifier_models() {
     local archive_dir="$TEMP_DIR/classifier"
-    local target_dir="$REPO_DIR/app/models/classifier/v2-seg"
+    local target_dir="$REPO_DIR/app/models/classifier/v4-seg-cropped"
     local model_file
     local labels_file
 
-    model_file="$(find_required_file "$archive_dir" "model_1_vit_segment_aware_v2_seg.pth")"
-    labels_file="$(find_required_file "$archive_dir" "labels_v2_seg.txt")"
+    model_file="$(find_required_file "$archive_dir" "model_1_vit_segment_aware_v4_seg_cropped.pth")"
+    labels_file="$(find_required_file "$archive_dir" "labels_v4_seg_cropped.txt")"
     mkdir -p "$target_dir"
     cp -f "$model_file" "$target_dir/"
     cp -f "$labels_file" "$target_dir/"
@@ -124,10 +124,10 @@ install_thumb_models() {
 }
 
 classifier_models_ready() {
-    local target_dir="$REPO_DIR/app/models/classifier/v2-seg"
+    local target_dir="$REPO_DIR/app/models/classifier/v4-seg-cropped"
 
-    [[ -f "$target_dir/model_1_vit_segment_aware_v2_seg.pth" && \
-        -f "$target_dir/labels_v2_seg.txt" ]]
+    [[ -f "$target_dir/model_1_vit_segment_aware_v4_seg_cropped.pth" && \
+        -f "$target_dir/labels_v4_seg_cropped.txt" ]]
 }
 
 segmentation_models_ready() {
@@ -150,8 +150,8 @@ thumb_models_ready() {
 validate_installation() {
     local app_dir="$REPO_DIR/app"
 
-    [[ -f "$app_dir/models/classifier/v2-seg/model_1_vit_segment_aware_v2_seg.pth" ]] || fail "Classifier checkpoint is missing"
-    [[ -f "$app_dir/models/classifier/v2-seg/labels_v2_seg.txt" ]] || fail "Classifier labels are missing"
+    [[ -f "$app_dir/models/classifier/v4-seg-cropped/model_1_vit_segment_aware_v4_seg_cropped.pth" ]] || fail "Classifier checkpoint is missing"
+    [[ -f "$app_dir/models/classifier/v4-seg-cropped/labels_v4_seg_cropped.txt" ]] || fail "Classifier labels are missing"
     [[ -f "$app_dir/models/segmentation/checkpoints/sam2_hiera_large.pt" ]] || fail "Segmentation checkpoint is missing"
     [[ -f "$app_dir/models/segmentation/configs/sam2/sam2_hiera_l.yaml" ]] || fail "Segmentation config is missing"
     [[ -f "$app_dir/models/segmentation/sam2/build_sam.py" ]] || fail "SAM2 package is missing"

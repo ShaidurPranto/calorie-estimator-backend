@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $REPO_URL = "https://github.com/ShaidurPranto/calorie-estimator-backend.git"
-$CLASSIFIER_URL = "https://www.kaggle.com/api/v1/datasets/download/ifty3110/food-classifier-models-v2-seg"
+$CLASSIFIER_URL = "https://www.kaggle.com/api/v1/datasets/download/ifty3110/food-classifier-models-v4-seg-cropped"
 $SEGMENTATION_URL = "https://www.kaggle.com/api/v1/datasets/download/ifty3110/segmentation-module-checkpoints-config"
 $THUMB_URL = "https://www.kaggle.com/api/v1/datasets/download/intesartahmidalam/finger-detector-and-calibration-files"
 $VENV_NAME = "calorie-estimator-venv"
@@ -97,10 +97,10 @@ function Prepare-Repository {
 
 function Install-Classifier-Models {
     $ArchiveDir = Join-Path $TEMP_DIR "classifier"
-    $TargetDir = Join-Path $REPO_DIR "app\models\classifier\v2-seg"
+    $TargetDir = Join-Path $REPO_DIR "app\models\classifier\v4-seg-cropped"
 
-    $ModelFile = Find-Required-File $ArchiveDir "model_1_vit_segment_aware_v2_seg.pth"
-    $LabelsFile = Find-Required-File $ArchiveDir "labels_v2_seg.txt"
+    $ModelFile = Find-Required-File $ArchiveDir "model_1_vit_segment_aware_v4_seg_cropped.pth"
+    $LabelsFile = Find-Required-File $ArchiveDir "labels_v4_seg_cropped.txt"
 
     New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
 
@@ -166,11 +166,11 @@ function Install-Thumb-Models {
 }
 
 function Classifier-Models-Ready {
-    $TargetDir = Join-Path $REPO_DIR "app\models\classifier\v2-seg"
+    $TargetDir = Join-Path $REPO_DIR "app\models\classifier\v4-seg-cropped"
 
     return (
-        (Test-Path (Join-Path $TargetDir "model_1_vit_segment_aware_v2_seg.pth") -PathType Leaf) -and
-        (Test-Path (Join-Path $TargetDir "labels_v2_seg.txt") -PathType Leaf)
+        (Test-Path (Join-Path $TargetDir "model_1_vit_segment_aware_v4_seg_cropped.pth") -PathType Leaf) -and
+        (Test-Path (Join-Path $TargetDir "labels_v4_seg_cropped.txt") -PathType Leaf)
     )
 }
 
@@ -198,11 +198,11 @@ function Thumb-Models-Ready {
 function Validate-Installation {
     $AppDir = Join-Path $REPO_DIR "app"
 
-    if (-not (Test-Path (Join-Path $AppDir "models\classifier\v2-seg\model_1_vit_segment_aware_v2_seg.pth") -PathType Leaf)) {
+    if (-not (Test-Path (Join-Path $AppDir "models\classifier\v4-seg-cropped\model_1_vit_segment_aware_v4_seg_cropped.pth") -PathType Leaf)) {
         Fail "Classifier checkpoint is missing"
     }
 
-    if (-not (Test-Path (Join-Path $AppDir "models\classifier\v2-seg\labels_v2_seg.txt") -PathType Leaf)) {
+    if (-not (Test-Path (Join-Path $AppDir "models\classifier\v4-seg-cropped\labels_v4_seg_cropped.txt") -PathType Leaf)) {
         Fail "Classifier labels are missing"
     }
 
